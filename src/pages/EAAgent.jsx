@@ -1,6 +1,14 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { PageHeader, PageContent, Card, CardHeader, Tag } from '../components/UI.jsx'
 import styles from './Pages.module.css'
+
+const TOOL_LABELS = {
+  list_actions: 'Reading actions',
+  create_action: 'Creating action',
+  create_multiple_actions: 'Creating actions',
+  update_action: 'Updating action',
+  delete_action: 'Deleting action',
+}
 
 const EA_COMMANDS = [
   { label: 'Draft offer / revenue share agreement', prompt: 'Draft a revenue share offer letter for a new Kato.8 Studios collaborator. Include all standard sections: role description, revenue share %, IP assignment clause, at-will language, and start date.' },
@@ -22,7 +30,7 @@ const WORKFLOWS = [
   { icon: '📁', title: 'Drive document indexing', desc: 'EA reads Google Drive to answer team questions about policies, find templates, and check what agreements are on file.', status: 'Active' },
 ]
 
-function Message({ role, content }) {
+function Message({ role, content, toolCalls }) {
   return (
     <div className={`${styles.chatMsg} ${role === 'user' ? styles.msgUser : styles.msgAssistant}`}>
       <div className={styles.chatAvatar} style={role === 'assistant'
@@ -31,11 +39,23 @@ function Message({ role, content }) {
       }>
         {role === 'assistant' ? '◈' : 'You'}
       </div>
-      <div className={styles.chatBubble} style={role === 'user'
-        ? { background: 'var(--k8-accent)', color: '#fff', borderBottomRightRadius: 4 }
-        : { background: 'var(--bg-secondary)', color: 'var(--text-primary)', borderBottomLeftRadius: 4 }
-      }>
-        <MdContent text={content} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxWidth: '80%' }}>
+        {toolCalls && toolCalls.length > 0 && (
+          <div className={styles.toolBadges}>
+            {toolCalls.map((t, i) => (
+              <span key={i} className={`${styles.toolBadge} ${styles.toolBadgeDone}`}>
+                <span className={styles.toolCheck}>✓</span>
+                {TOOL_LABELS[t.name] ?? t.name}
+              </span>
+            ))}
+          </div>
+        )}
+        <div className={styles.chatBubble} style={role === 'user'
+          ? { background: 'var(--k8-accent)', color: '#fff', borderBottomRightRadius: 4 }
+          : { background: 'var(--bg-secondary)', color: 'var(--text-primary)', borderBottomLeftRadius: 4 }
+        }>
+          <MdContent text={content} />
+        </div>
       </div>
     </div>
   )
@@ -72,6 +92,7 @@ export default function EAAgent() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [streamText, setStreamText] = useState('')
+  const [streamTools, setStreamTools] = useState([])
   const [serverError, setServerError] = useState(false)
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
@@ -90,7 +111,11 @@ export default function EAAgent() {
     setInput('')
     setLoading(true)
     setStreamText('')
+    setStreamTools([])
     setServerError(false)
+
+    let accumulated = ''
+    let finalTools = []
 
     try {
       const response = await fetch('/api/ea', {
@@ -103,7 +128,6 @@ export default function EAAgent() {
 
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
-      let accumulated = ''
 
       while (true) {
         const { done, value } = await reader.read()
@@ -116,14 +140,30 @@ export default function EAAgent() {
           if (data === '[DONE]') break
           try {
             const parsed = JSON.parse(data)
-            if (parsed.error) throw new Error(parsed.error)
-            accumulated += parsed.text
-            setStreamText(accumulated)
-          } catch {}
+            if (parsed.type === 'text') {
+              accumulated += parsed.text
+              setStreamText(accumulated)
+            } else if (parsed.type === 'tool_start') {
+              const entry = { id: parsed.id, name: parsed.tool, done: false }
+              finalTools = [...finalTools, entry]
+              setStreamTools([...finalTools])
+            } else if (parsed.type === 'tool_done') {
+              finalTools = finalTools.map(t => t.id === parsed.id ? { ...t, done: true } : t)
+              setStreamTools([...finalTools])
+            } else if (parsed.type === 'error') {
+              throw new Error(parsed.error)
+            }
+          } catch (parseErr) {
+            if (parseErr.message && !parseErr.message.includes('JSON')) throw parseErr
+          }
         }
       }
 
-      setMessages(prev => [...prev, { role: 'assistant', content: accumulated }])
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: accumulated,
+        toolCalls: finalTools,
+      }])
     } catch (err) {
       setServerError(true)
       setMessages(prev => [...prev, {
@@ -132,6 +172,7 @@ export default function EAAgent() {
       }])
     } finally {
       setStreamText('')
+      setStreamTools([])
       setLoading(false)
       inputRef.current?.focus()
     }
@@ -177,15 +218,32 @@ export default function EAAgent() {
             )}
 
             {messages.map((msg, i) => (
-              <Message key={i} role={msg.role} content={msg.content} />
+              <Message key={i} role={msg.role} content={msg.content} toolCalls={msg.toolCalls} />
             ))}
 
-            {streamText && (
+            {(streamText || (loading && streamTools.length > 0)) && (
               <div className={`${styles.chatMsg} ${styles.msgAssistant}`}>
                 <div className={styles.chatAvatar} style={{ background: 'var(--k8-accent)', color: '#fff' }}>◈</div>
-                <div className={styles.chatBubble} style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', borderBottomLeftRadius: 4 }}>
-                  <MdContent text={streamText} />
-                  <span className={styles.cursor}>▋</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxWidth: '80%' }}>
+                  {streamTools.length > 0 && (
+                    <div className={styles.toolBadges}>
+                      {streamTools.map((t, i) => (
+                        <span key={i} className={`${styles.toolBadge} ${t.done ? styles.toolBadgeDone : styles.toolBadgeRunning}`}>
+                          {t.done
+                            ? <span className={styles.toolCheck}>✓</span>
+                            : <span className={styles.toolSpinner} />
+                          }
+                          {TOOL_LABELS[t.name] ?? t.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {streamText && (
+                    <div className={styles.chatBubble} style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', borderBottomLeftRadius: 4 }}>
+                      <MdContent text={streamText} />
+                      <span className={styles.cursor}>▋</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

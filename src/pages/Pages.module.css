@@ -332,6 +332,15 @@
 .cursor { display: inline-block; animation: blink 1s step-end infinite; margin-left: 1px; }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
+/* ─── Tool activity badges ───────────────────────────── */
+.toolBadges { display: flex; flex-wrap: wrap; gap: 5px; }
+.toolBadge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 3px 9px; border-radius: 20px; font-weight: 500; }
+.toolBadgeRunning { background: var(--k8-accent-light); color: var(--k8-accent-dark); border: 0.5px solid var(--k8-accent); }
+.toolBadgeDone { background: var(--k8-teal-light); color: var(--k8-teal); border: 0.5px solid var(--k8-teal); }
+.toolCheck { font-size: 10px; font-weight: 700; }
+.toolSpinner { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--k8-accent); border-top-color: transparent; animation: spin 0.7s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ─── Markdown content in chat ───────────────────────── */
 .mdContent { display: flex; flex-direction: column; gap: 2px; }
 .mdH1 { font-size: 14px; font-weight: 600; margin: 8px 0 4px; }
