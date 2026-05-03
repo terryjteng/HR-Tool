@@ -1,0 +1,339 @@
+/* ─── EA Banner ─────────────────────────────────────── */
+.eaBanner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, var(--k8-accent-light) 0%, var(--k8-teal-light) 100%);
+  border: 0.5px solid var(--k8-accent);
+  border-radius: var(--radius-lg);
+  padding: 14px 18px;
+}
+
+.eaBannerIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--k8-accent);
+  color: #fff;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.eaBannerText { flex: 1; }
+
+.eaBannerTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.eaBannerSub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.eaBannerActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ─── Task list ──────────────────────────────────────── */
+.taskList { display: flex; flex-direction: column; }
+
+.taskRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 0.5px solid var(--border-light);
+  font-size: 13px;
+}
+.taskRow:last-child { border-bottom: none; }
+
+.taskDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-red { background: var(--k8-danger); }
+.dot-amber { background: var(--k8-amber); }
+.dot-green { background: var(--k8-teal); }
+.dot-purple { background: var(--k8-accent); }
+.dot-blue { background: var(--k8-blue); }
+
+.taskText { flex: 1; color: var(--text-primary); }
+.taskMeta { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+
+/* ─── Person list ────────────────────────────────────── */
+.personList { display: flex; flex-direction: column; }
+
+.personRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 0.5px solid var(--border-light);
+}
+.personRow:last-child { border-bottom: none; }
+
+.personInfo { flex: 1; }
+.personName { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+.personRole { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+
+/* ─── Integration grid ───────────────────────────────── */
+.intGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.intRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.15s;
+}
+.intRow:hover { background: var(--bg-primary); border: 0.5px solid var(--border-medium); }
+
+.intDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.intName { flex: 1; font-weight: 500; color: var(--text-primary); font-size: 12px; }
+
+/* ─── Section tabs ───────────────────────────────────── */
+.tabBar {
+  display: flex;
+  gap: 0;
+  border-bottom: 0.5px solid var(--border-light);
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+
+.tab {
+  padding: 8px 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: all 0.15s;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+.tab:hover { color: var(--text-primary); }
+.tab.tabActive { color: var(--text-primary); border-bottom-color: var(--k8-accent); }
+
+/* ─── Compliance items ───────────────────────────────── */
+.compItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 0.5px solid var(--border-light);
+  transition: background 0.12s;
+}
+.compItem:last-child { border-bottom: none; }
+.compItem.done { opacity: 0.6; }
+
+.checkBox {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border-medium);
+  flex-shrink: 0;
+  margin-top: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  background: none;
+}
+.checkBox.checked { background: var(--k8-teal); border-color: var(--k8-teal); }
+.checkBox.checked::after { content: '✓'; color: #fff; font-size: 10px; }
+
+.compBody { flex: 1; }
+.compTitle { font-size: 13px; font-weight: 500; color: var(--text-primary); line-height: 1.4; }
+.compDesc { font-size: 12px; color: var(--text-secondary); margin-top: 3px; line-height: 1.5; }
+.compMeta { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.compDue { font-size: 11px; color: var(--text-secondary); }
+.compAction { font-size: 11px; color: var(--k8-accent); cursor: pointer; margin-left: auto; }
+.compAction:hover { text-decoration: underline; }
+
+/* ─── Section header ─────────────────────────────────── */
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  border-bottom: 0.5px solid var(--border-light);
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.sectionHeaderRight { margin-left: auto; font-size: 11px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+.progBar { height: 4px; width: 80px; background: var(--bg-tertiary); border-radius: 2px; overflow: hidden; }
+.progFill { height: 100%; border-radius: 2px; background: var(--k8-accent); }
+
+/* ─── Onboarding tasks ───────────────────────────────── */
+.obTask {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 0.5px solid var(--border-light);
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.obTask:hover { border-color: var(--k8-accent); background: var(--bg-primary); }
+.obTask.obDone { opacity: 0.65; }
+.obTaskHeader { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.obIcon { width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+.obTaskTitle { font-size: 12px; font-weight: 500; color: var(--text-primary); flex: 1; line-height: 1.3; }
+.obCheck { width: 16px; height: 16px; border-radius: 3px; border: 1.5px solid var(--border-medium); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; background: none; }
+.obCheck.obChecked { background: var(--k8-teal); border-color: var(--k8-teal); }
+.obCheck.obChecked::after { content: '✓'; color: #fff; font-size: 9px; }
+.obTaskDesc { font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
+.obOwner { font-size: 10px; margin-top: 6px; padding: 2px 7px; border-radius: 8px; display: inline-block; }
+.own-HR, .own-hr { background: var(--k8-accent-light); color: var(--k8-accent-dark); }
+.own-IT, .own-it { background: var(--k8-blue-light); color: var(--k8-blue); }
+.own-Manager, .own-manager { background: var(--k8-teal-light); color: var(--k8-teal); }
+.own-Member, .own-member { background: var(--k8-amber-light); color: var(--k8-amber); }
+.own-Buddy, .own-buddy { background: var(--k8-coral-light); color: var(--k8-coral); }
+
+/* ─── Progress bar ───────────────────────────────────── */
+.progressSection {
+  padding: 12px 20px;
+  border-top: 0.5px solid var(--border-light);
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.progressTrack { flex: 1; height: 6px; background: var(--bg-tertiary); border-radius: 3px; overflow: hidden; }
+.progressFill { height: 100%; background: var(--k8-accent); border-radius: 3px; transition: width 0.4s; }
+.progressPct { font-size: 12px; font-weight: 500; color: var(--text-primary); min-width: 32px; text-align: right; }
+
+/* ─── Document rows ──────────────────────────────────── */
+.docRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 0.5px solid var(--border-light);
+  font-size: 13px;
+}
+.docRow:last-child { border-bottom: none; }
+.docIcon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.docName { flex: 1; color: var(--text-primary); font-weight: 500; }
+.docLocation { font-size: 11px; color: var(--text-secondary); }
+.docNote { font-size: 11px; color: var(--k8-amber); }
+
+/* ─── Integration detail ─────────────────────────────── */
+.intDetail { display: flex; gap: 0; min-height: 480px; }
+.intList { width: 220px; min-width: 220px; border-right: 0.5px solid var(--border-light); overflow-y: auto; }
+.intListItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  border-bottom: 0.5px solid var(--border-light);
+  transition: all 0.12s;
+}
+.intListItem:hover { background: var(--bg-secondary); }
+.intListItem.intListActive { background: var(--bg-secondary); border-left-color: var(--k8-accent); }
+.intListIcon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.intListInfo { flex: 1; min-width: 0; }
+.intListName { font-size: 12px; font-weight: 500; color: var(--text-primary); }
+.intListCat { font-size: 10px; color: var(--text-secondary); margin-top: 1px; }
+.intListLabel { font-size: 9px; padding: 2px 6px; border-radius: 6px; margin-top: 4px; display: inline-block; }
+.intDetailPane { flex: 1; padding: 20px; overflow-y: auto; }
+.intDetailTop { display: flex; gap: 14px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 0.5px solid var(--border-light); }
+.intDetailIcon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+.intDetailName { font-size: 16px; font-weight: 500; color: var(--text-primary); }
+.intDetailDesc { font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.6; }
+.benefits { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.benefit { font-size: 11px; padding: 3px 9px; border-radius: 12px; background: var(--bg-secondary); color: var(--text-primary); border: 0.5px solid var(--border-light); }
+.setupStep { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+.stepNum { width: 22px; height: 22px; border-radius: 50%; background: var(--k8-accent-light); color: var(--k8-accent-dark); font-size: 11px; font-weight: 500; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.stepNumDone { background: var(--k8-teal-light); color: var(--k8-teal); }
+.stepText { font-size: 13px; color: var(--text-primary); line-height: 1.6; flex: 1; }
+.intActions { display: flex; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 0.5px solid var(--border-light); }
+
+/* ─── Org chart ──────────────────────────────────────── */
+.orgWrap { overflow-x: auto; padding: 20px 0 10px; }
+.orgTree { display: flex; flex-direction: column; align-items: center; min-width: 900px; gap: 0; }
+.vLine { width: 1px; height: 20px; background: var(--border-medium); }
+.hBar { height: 1px; background: var(--border-medium); }
+.orgRow { display: flex; gap: 20px; justify-content: center; position: relative; }
+.orgBranch { display: flex; flex-direction: column; align-items: center; padding: 0 10px; }
+.orgBox {
+  padding: 9px 14px;
+  border-radius: 8px;
+  border: 0.5px solid var(--border-medium);
+  cursor: pointer;
+  text-align: center;
+  min-width: 110px;
+  max-width: 160px;
+  transition: all 0.15s;
+}
+.orgBox:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+.orgBoxName { font-size: 12px; font-weight: 500; }
+.orgBoxRole { font-size: 10px; margin-top: 2px; }
+.orgVacant { border-style: dashed; }
+.vacantBadge { font-size: 9px; background: var(--k8-amber-light); color: var(--k8-amber); padding: 1px 5px; border-radius: 6px; margin-top: 3px; display: inline-block; }
+.deptLabel { font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; padding: 3px 8px; border-radius: 4px; margin-bottom: 6px; }
+
+/* ─── EA page ────────────────────────────────────────── */
+.eaCommands { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.eaCmd { padding: 10px 14px; font-size: 12px; background: var(--bg-secondary); border: 0.5px solid var(--border-light); border-radius: var(--radius-md); cursor: pointer; text-align: left; color: var(--text-primary); transition: all 0.15s; }
+.eaCmd:hover { background: var(--bg-primary); border-color: var(--k8-accent); color: var(--k8-accent); }
+
+/* ─── People page ────────────────────────────────────── */
+.memberCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 0.5px solid var(--border-light);
+}
+.memberCard:last-child { border-bottom: none; }
+.memberInfo { flex: 1; }
+.memberName { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+.memberMeta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.memberTags { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+
+/* ─── Hiring ─────────────────────────────────────────── */
+.roleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 0.5px solid var(--border-light);
+  font-size: 13px;
+}
+.roleRow:last-child { border-bottom: none; }
+.roleTitle { font-weight: 500; color: var(--text-primary); flex: 1; }
+.roleMeta { font-size: 12px; color: var(--text-secondary); }

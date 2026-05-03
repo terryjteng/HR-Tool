@@ -1,0 +1,133 @@
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  height: 100vh;
+  background: var(--bg-primary);
+  border-right: 0.5px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px 16px;
+  border-bottom: 0.5px solid var(--border-light);
+}
+
+.logoMark {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--k8-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logoName {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.logoSub {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+
+.navGroup {
+  padding: 10px 0 4px;
+  border-bottom: 0.5px solid var(--border-light);
+}
+
+.navLabel {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0 16px 6px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  transition: all 0.12s;
+  text-align: left;
+}
+
+.navItem:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.navItem.active {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-left-color: var(--k8-accent);
+}
+
+.navIcon {
+  width: 16px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.navLabel2 {
+  flex: 1;
+}
+
+.badge {
+  font-size: 10px;
+  background: var(--k8-accent);
+  color: #fff;
+  border-radius: 10px;
+  padding: 1px 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.badgeWarn {
+  background: var(--k8-amber);
+}
+
+.badgeLive {
+  background: var(--k8-teal);
+  font-size: 12px;
+  padding: 0 4px;
+}
+
+.footer {
+  padding: 16px;
+  margin-top: auto;
+  border-top: 0.5px solid var(--border-light);
+}
+
+.footerMode {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.footerStatus {
+  font-size: 11px;
+  color: var(--k8-teal);
+  margin-top: 3px;
+}
