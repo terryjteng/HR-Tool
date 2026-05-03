@@ -248,6 +248,8 @@
 .docName { flex: 1; color: var(--text-primary); font-weight: 500; }
 .docLocation { font-size: 11px; color: var(--text-secondary); }
 .docNote { font-size: 11px; color: var(--k8-amber); }
+.docAction { font-size: 11px; color: var(--k8-accent); cursor: pointer; background: none; border: none; padding: 2px 6px; border-radius: 6px; white-space: nowrap; flex-shrink: 0; }
+.docAction:hover { background: var(--k8-accent-light); }
 
 /* ─── Integration detail ─────────────────────────────── */
 .intDetail { display: flex; gap: 0; min-height: 480px; }
@@ -310,6 +312,51 @@
 .eaCommands { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .eaCmd { padding: 10px 14px; font-size: 12px; background: var(--bg-secondary); border: 0.5px solid var(--border-light); border-radius: var(--radius-md); cursor: pointer; text-align: left; color: var(--text-primary); transition: all 0.15s; }
 .eaCmd:hover { background: var(--bg-primary); border-color: var(--k8-accent); color: var(--k8-accent); }
+.eaCmd:disabled { opacity: 0.5; cursor: default; }
+
+/* ─── EA Chat ─────────────────────────────────────────── */
+.chatCard { padding: 0 !important; overflow: hidden; display: flex; flex-direction: column; }
+.chatWindow { flex: 1; min-height: 380px; max-height: 460px; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+.chatEmpty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-secondary); font-size: 13px; gap: 6px; text-align: center; padding: 40px 20px; }
+.chatEmptyIcon { font-size: 30px; opacity: 0.45; margin-bottom: 4px; }
+.chatMsg { display: flex; gap: 10px; align-items: flex-start; }
+.msgUser { flex-direction: row-reverse; }
+.chatAvatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; margin-top: 2px; }
+.chatBubble { max-width: 80%; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.6; word-break: break-word; }
+.chatInputBar { display: flex; gap: 8px; padding: 10px 16px 12px; border-top: 0.5px solid var(--border-light); }
+.chatInputBar input { flex: 1; font-size: 13px; padding: 8px 12px; }
+.chatInputBar input:disabled { opacity: 0.5; }
+.chatInputBar button { padding: 8px 18px; font-size: 12px; font-weight: 500; background: var(--k8-accent); color: #fff; border-radius: 20px; border: none; cursor: pointer; transition: opacity 0.15s; white-space: nowrap; flex-shrink: 0; }
+.chatInputBar button:hover:not(:disabled) { opacity: 0.85; }
+.chatInputBar button:disabled { opacity: 0.4; cursor: default; }
+.cursor { display: inline-block; animation: blink 1s step-end infinite; margin-left: 1px; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* ─── Markdown content in chat ───────────────────────── */
+.mdContent { display: flex; flex-direction: column; gap: 2px; }
+.mdH1 { font-size: 14px; font-weight: 600; margin: 8px 0 4px; }
+.mdH2 { font-size: 13px; font-weight: 600; margin: 6px 0 3px; opacity: 0.9; }
+.mdBold { font-weight: 600; font-size: 13px; }
+.mdPara { font-size: 13px; line-height: 1.6; }
+.mdBullet { display: flex; gap: 8px; font-size: 13px; line-height: 1.5; padding-left: 4px; }
+.mdBulletDot { color: var(--k8-accent); font-size: 16px; line-height: 1.2; flex-shrink: 0; }
+
+/* ─── Modal ───────────────────────────────────────────── */
+.modalOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal { background: var(--bg-primary); border-radius: var(--radius-xl); border: 0.5px solid var(--border-light); width: 420px; max-width: 94vw; box-shadow: var(--shadow-md); }
+.modalHeader { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 0.5px solid var(--border-light); }
+.modalTitle { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+.modalClose { font-size: 20px; color: var(--text-secondary); width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 6px; cursor: pointer; line-height: 1; }
+.modalClose:hover { background: var(--bg-secondary); }
+.modalBody { padding: 16px 20px; display: flex; flex-direction: column; gap: 13px; }
+.formRow { display: flex; flex-direction: column; gap: 5px; }
+.formRow label { font-size: 11px; font-weight: 500; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+.formRow input, .formRow select { width: 100%; font-size: 13px; }
+.modalFooter { display: flex; justify-content: flex-end; gap: 8px; padding-top: 4px; }
+.btnCancel { font-size: 12px; padding: 6px 16px; border-radius: 20px; border: 0.5px solid var(--border-medium); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer; font-weight: 500; }
+.btnCancel:hover { border-color: var(--border-strong); }
+.btnSubmit { font-size: 12px; padding: 6px 16px; border-radius: 20px; border: none; background: var(--k8-accent); color: #fff; cursor: pointer; font-weight: 500; }
+.btnSubmit:hover { opacity: 0.88; }
 
 /* ─── People page ────────────────────────────────────── */
 .memberCard {
