@@ -1,15 +1,17 @@
 import styles from './Sidebar.module.css'
 
+// Compliance: 2 critical + 8 high = 10 open issues
+// Documents: 4 items with non-current status (pending-sigs, expiring, needs-update, draft)
 const NAV = [
   { section: 'Core', items: [
     { id: 'dashboard', icon: '⊞', label: 'Dashboard' },
-    { id: 'people', icon: '◎', label: 'People', badge: '6' },
+    { id: 'people', icon: '◎', label: 'People', badge: '33' },
     { id: 'org', icon: '⌥', label: 'Org Chart' },
-    { id: 'docs', icon: '≡', label: 'Documents', badge: '3', badgeWarn: true },
+    { id: 'docs', icon: '≡', label: 'Documents', badge: '4', badgeWarn: true },
   ]},
   { section: 'Operations', items: [
-    { id: 'compliance', icon: '✓', label: 'Compliance', badge: '6', badgeWarn: true },
-    { id: 'hiring', icon: '+', label: 'Hiring', badge: '3' },
+    { id: 'compliance', icon: '✓', label: 'Compliance', badge: '10', badgeWarn: true },
+    { id: 'hiring', icon: '+', label: 'Hiring', badge: '1' },
     { id: 'onboarding', icon: '→', label: 'Onboarding' },
   ]},
   { section: 'Integrations', items: [

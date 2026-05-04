@@ -208,38 +208,71 @@ Area tags: overall (Overall Studio), web (Website/UI·UX), social (Social & Mark
 
 STUDIO OVERVIEW:
 - Name: Kato.8 Studios
-- Model: Revenue-share (no traditional salaries — all compensation is equity/revenue share %)
-- Location: Mission Hills, California (hybrid — some remote members)
-- Focus: Animation, VFX, 3D Art, Sound Design, Video Production
+- Model: Revenue-share (no traditional salaries — all compensation is revenue share %)
+- Location: Mission Hills, California (hybrid — most members remote)
+- Focus: Animation, 2D/3D Art, UI/UX Design, Engineering, Sound Design, Voice
+- Total team: 33 members (28 revenue share + 5 interns)
 
-CURRENT TEAM (6 members):
-1. Studio Head — Studio Head / CEO — Executive — Mission Hills, CA — Active
-2. Sam Rodriguez — Creative Director — Creative — Los Angeles, CA — Review Due
-3. Jordan Park — Lead Animator — Creative — Remote — Active
-4. Alex Martinez — 3D Artist — Creative — Los Angeles, CA — Onboarding (Day 1 phase)
-5. Taylor Kim — Head of Production — Production — Los Angeles, CA — Active
-6. Morgan Lee — Sound Designer — Production — Remote — Active
+CURRENT TEAM (33 members):
+EXECUTIVE: Terry Teng — Founder & CEO — Mission Hills, CA
 
-OPEN ROLES (3 active):
-1. Senior Animator (Creative) — Offer stage — 4 candidates — URGENT
-2. VFX Artist (Creative) — Screening — 12 candidates
-3. Studio Ops Coordinator (Operations) — Phone screen — 7 candidates
+DESIGN DEPT (7):
+- Ryan K — Lead Designer (reports to Terry; manages Luis C, Ashlee W*, Cori M*)
+- Pride SC — Lead Designer (reports to Terry; manages Ryan P)
+- Sophia J — Lead Designer (reports to Terry)
+- Luis C — Designer
+- Ryan P — Designer
+- Ashlee W* — Design Intern
+- Cori M* — Design Intern
+
+ENGINEERING DEPT (4):
+- Carlos T — Lead Engineer (reports to Terry)
+- Rhianna — Lead Engineer (reports to Terry)
+- Daniel F — Lead Eng / Dev (reports to Terry; manages Michael A)
+- Michael A — Eng / Dev
+
+ART DEPT (11 + 1 open):
+- Bryan N — Lead Artist (reports to Terry; manages Mia C, Keolani B, Pedro S*)
+- Hailey H — Lead Artist (reports to Terry; manages Liz P, Ray P, Juno TC)
+- Chris C — Lead Artist (reports to Terry; manages Luna, Jacob; has open 2D Animator role)
+- Mia C, Keolani B, Liz P, Ray P, Juno TC, Luna, Jacob — Artists
+- Pedro S* — Art Intern
+
+UI/UX DEPT (3):
+- Tessa L — UI/UX Lead (reports to Terry; manages Adam M*, Katie L*)
+- Adam M* — UI/UX Eng Intern
+- Katie L* — UI/UX + SM Intern
+
+AUDIO & VOICE DEPT (7):
+- Schwa — Sound (reports to Terry)
+- Ayako — Sound (reports to Terry)
+- Sandy C — Music (reports to Terry)
+- Lauren P — Narration (reports to Terry)
+- Michael TB — Voice (reports to Terry)
+- Janey — Voice (reports to Terry)
+- Emmanuel — 2nd Voice (reports to Terry)
+
+(* = intern)
+
+OPEN ROLES (1):
+- 2D Animator — Art dept — under Chris C — Actively Hiring
 
 COMPLIANCE STATUS (as of 2026-05-02):
 CRITICAL / OVERDUE:
 - CA SB 553 Workplace Violence Prevention Plan — Due 2026-05-06 (4 days away)
-- IP Assignment Agreements — 2 team members have unsigned agreements (overdue)
+- IP Assignment Agreements — 2 team members unsigned (overdue)
 
 HIGH PRIORITY:
-- Revenue Share Agreements — all members need verification they're fully executed
-- NDA renewal — studio-wide NDA template expires June 1, 2026
-- CA SB 1162 Pay transparency policy needed
-- CCPA Privacy Notice for collaborators — draft exists, needs finalization
+- Revenue Share Agreements — verify all 33 members fully executed
+- NDAs on file for all 33 members
+- NDA template renewal — expires June 1, 2026
+- CA SB 1162 Pay transparency — must disclose revenue share % on 2D Animator posting
+- CCPA Privacy Notice — draft exists, needs finalization
 - IIPP annual review needed
+- Revenue share % documented per each of 28 members
+- Revenue definition clause, offboarding clause in all agreements
 
 INTEGRATIONS: DocuSign (active), Google Drive (active), Google Calendar (active), Discord (active, #hr-ops pending), Notion (pending), EA Agent (active).
-
-ONBOARDING — Alex Martinez (3D Artist, Day 1 phase): Pre-hire docs complete. Pending: Discord invite, Google Workspace, Day 1 orientation.
 
 INSTRUCTIONS:
 - Be concise, direct, and action-oriented. Lead with the answer.

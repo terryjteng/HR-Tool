@@ -3,13 +3,13 @@ import { TEAM } from '../data/studioData.js'
 import { PageHeader, PageContent, Card, CardHeader, Avatar, Tag, Button, StatusBadge } from '../components/UI.jsx'
 import styles from './Pages.module.css'
 
-const COLORS = ['purple', 'teal', 'amber', 'coral', 'blue', 'purple']
-const DEPT_COLORS = { executive: 'purple', creative: 'teal', production: 'amber', tech: 'blue', operations: 'coral' }
-
-const DEPTS = ['executive', 'creative', 'production', 'tech', 'operations']
+const AVATAR_COLORS = ['purple', 'teal', 'amber', 'coral', 'blue', 'purple']
+const DEPT_COLORS = { executive: 'purple', design: 'teal', engineering: 'blue', art: 'amber', uiux: 'purple', audio: 'coral' }
+const DEPT_LABELS = { executive: 'Executive', design: 'Design', engineering: 'Engineering', art: 'Art', uiux: 'UI/UX', audio: 'Audio & Voice' }
+const DEPTS = ['executive', 'design', 'engineering', 'art', 'uiux', 'audio']
 
 function AddMemberModal({ onClose, onAdd }) {
-  const [form, setForm] = useState({ name: '', role: '', dept: 'creative', location: '', status: 'active' })
+  const [form, setForm] = useState({ name: '', role: '', dept: 'design', location: '', status: 'active', type: 'revenue-share' })
 
   function set(field, val) {
     setForm(f => ({ ...f, [field]: val }))
@@ -29,7 +29,7 @@ function AddMemberModal({ onClose, onAdd }) {
       dept: form.dept,
       location: form.location.trim(),
       status: form.status,
-      type: 'revenue-share',
+      type: form.type,
     })
     onClose()
   }
@@ -65,8 +65,15 @@ function AddMemberModal({ onClose, onAdd }) {
             <label>Department</label>
             <select value={form.dept} onChange={e => set('dept', e.target.value)}>
               {DEPTS.map(d => (
-                <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>
+                <option key={d} value={d}>{DEPT_LABELS[d]}</option>
               ))}
+            </select>
+          </div>
+          <div className={styles.formRow}>
+            <label>Type</label>
+            <select value={form.type} onChange={e => set('type', e.target.value)}>
+              <option value="revenue-share">Revenue share</option>
+              <option value="intern">Intern</option>
             </select>
           </div>
           <div className={styles.formRow}>
@@ -101,6 +108,8 @@ export default function People() {
   const [showAdd, setShowAdd] = useState(false)
 
   const filtered = filter === 'all' ? team : team.filter(m => m.dept === filter)
+  const internCount = team.filter(m => m.type === 'intern').length
+  const revenueCount = team.filter(m => m.type === 'revenue-share').length
 
   function addMember(member) {
     setTeam(prev => [...prev, member])
@@ -110,20 +119,29 @@ export default function People() {
     <>
       <PageHeader
         title="People"
-        subtitle={`${team.length} collaborators · Revenue share team`}
+        subtitle={`${team.length} collaborators · ${revenueCount} revenue share · ${internCount} interns`}
         actions={<Button variant="primary" size="sm" onClick={() => setShowAdd(true)}>+ Add member</Button>}
       />
       <PageContent>
         <div className={styles.tabBar}>
-          {['all', ...DEPTS].map(f => (
-            <button
-              key={f}
-              className={`${styles.tab} ${filter === f ? styles.tabActive : ''}`}
-              onClick={() => setFilter(f)}
-            >
-              {f === 'all' ? `All (${team.length})` : f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
+          <button
+            className={`${styles.tab} ${filter === 'all' ? styles.tabActive : ''}`}
+            onClick={() => setFilter('all')}
+          >
+            All ({team.length})
+          </button>
+          {DEPTS.map(f => {
+            const count = team.filter(m => m.dept === f).length
+            return (
+              <button
+                key={f}
+                className={`${styles.tab} ${filter === f ? styles.tabActive : ''}`}
+                onClick={() => setFilter(f)}
+              >
+                {DEPT_LABELS[f]} {count > 0 && `(${count})`}
+              </button>
+            )
+          })}
         </div>
         <Card>
           {filtered.length === 0 ? (
@@ -133,13 +151,16 @@ export default function People() {
           ) : (
             filtered.map((m, i) => (
               <div key={m.id} className={styles.memberCard}>
-                <Avatar initials={m.initials} color={COLORS[i % COLORS.length]} size="lg" />
+                <Avatar initials={m.initials} color={AVATAR_COLORS[i % AVATAR_COLORS.length]} size="lg" />
                 <div className={styles.memberInfo}>
                   <div className={styles.memberName}>{m.name}</div>
                   <div className={styles.memberMeta}>{m.role} · {m.location}</div>
                   <div className={styles.memberTags}>
-                    <Tag color={DEPT_COLORS[m.dept] || 'default'}>{m.dept}</Tag>
-                    <Tag color="blue">Revenue share</Tag>
+                    <Tag color={DEPT_COLORS[m.dept] || 'default'}>{DEPT_LABELS[m.dept] || m.dept}</Tag>
+                    {m.type === 'intern'
+                      ? <Tag color="purple">Intern</Tag>
+                      : <Tag color="blue">Revenue share</Tag>
+                    }
                     <StatusBadge status={m.status} />
                   </div>
                 </div>
