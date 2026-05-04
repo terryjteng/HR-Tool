@@ -1,49 +1,63 @@
 // ─── TEAM DATA ────────────────────────────────────────────────────────────────
 export const TEAM = [
   // Executive
-  { id: 'ceo', name: 'Terry Teng', initials: 'TT', dept: 'executive', type: 'revenue-share', status: 'active', location: 'Mission Hills, CA', role: 'Founder & CEO' },
+  { id: 'ceo', name: 'Terry Teng', initials: 'TT', dept: 'executive', type: 'revenue-share', status: 'active', location: 'Mission Hills, CA', role: 'Founder & CEO', team: 'studio' },
 
-  // Design
-  { id: 'des-001', name: 'Ryan K', initials: 'RK', dept: 'design', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Designer' },
-  { id: 'des-002', name: 'Luis C', initials: 'LC', dept: 'design', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Designer' },
-  { id: 'des-003', name: 'Ashlee W', initials: 'AW', dept: 'design', type: 'intern', status: 'active', location: 'Remote', role: 'Design Intern' },
-  { id: 'des-004', name: 'Cori M', initials: 'CM', dept: 'design', type: 'intern', status: 'active', location: 'Remote', role: 'Design Intern' },
-  { id: 'des-005', name: 'Pride SC', initials: 'PC', dept: 'design', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Designer' },
-  { id: 'des-006', name: 'Ryan P', initials: 'RP', dept: 'design', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Designer' },
-  { id: 'des-007', name: 'Sophia J', initials: 'SJ', dept: 'design', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Designer' },
+  // Design — Last Light team
+  { id: 'des-001', name: 'Ryan K', initials: 'RK', dept: 'design', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Designer', team: 'last-light' },
+  { id: 'des-002', name: 'Luis C', initials: 'LC', dept: 'design', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Designer', team: 'last-light' },
+  { id: 'des-003', name: 'Ashlee W', initials: 'AW', dept: 'design', type: 'intern', status: 'active', location: 'Remote', role: 'Design Intern', team: 'last-light' },
+  { id: 'des-004', name: 'Cori M', initials: 'CM', dept: 'design', type: 'intern', status: 'active', location: 'Remote', role: 'Design Intern', team: 'last-light' },
+  // Design — Corebound team
+  { id: 'des-005', name: 'Pride SC', initials: 'PC', dept: 'design', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Designer', team: 'corebound' },
+  { id: 'des-006', name: 'Ryan P', initials: 'RP', dept: 'design', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Designer', team: 'corebound' },
+  // Design — Big Boss Cleanup team
+  { id: 'des-007', name: 'Sophia J', initials: 'SJ', dept: 'design', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Designer', team: 'big-boss-cleanup' },
 
-  // Engineering
-  { id: 'eng-001', name: 'Carlos T', initials: 'CT', dept: 'engineering', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Engineer' },
-  { id: 'eng-002', name: 'Rhianna', initials: 'RH', dept: 'engineering', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Engineer' },
-  { id: 'eng-003', name: 'Daniel F', initials: 'DF', dept: 'engineering', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Eng / Dev' },
-  { id: 'eng-004', name: 'Michael A', initials: 'MA', dept: 'engineering', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Eng / Dev' },
+  // Engineering — Last Light team
+  { id: 'eng-001', name: 'Carlos T', initials: 'CT', dept: 'engineering', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Engineer', team: 'last-light' },
+  // Engineering — Corebound team
+  { id: 'eng-002', name: 'Rhianna', initials: 'RH', dept: 'engineering', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Engineer', team: 'corebound' },
+  // Engineering — Big Boss Cleanup team
+  { id: 'eng-003', name: 'Daniel F', initials: 'DF', dept: 'engineering', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Eng / Dev', team: 'big-boss-cleanup' },
+  { id: 'eng-004', name: 'Michael A', initials: 'MA', dept: 'engineering', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Eng / Dev', team: 'big-boss-cleanup' },
 
-  // Art
-  { id: 'art-001', name: 'Bryan N', initials: 'BN', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Artist' },
-  { id: 'art-002', name: 'Mia C', initials: 'MC', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Artist' },
-  { id: 'art-003', name: 'Keolani B', initials: 'KB', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Artist' },
-  { id: 'art-004', name: 'Pedro S', initials: 'PS', dept: 'art', type: 'intern', status: 'active', location: 'Remote', role: 'Art Intern' },
-  { id: 'art-005', name: 'Hailey H', initials: 'HH', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Artist' },
-  { id: 'art-006', name: 'Liz P', initials: 'LP', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Artist' },
-  { id: 'art-007', name: 'Ray P', initials: 'RP', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Artist' },
-  { id: 'art-008', name: 'Juno TC', initials: 'JT', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Artist' },
-  { id: 'art-009', name: 'Chris C', initials: 'CC', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Artist' },
-  { id: 'art-010', name: 'Luna', initials: 'LU', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Artist' },
-  { id: 'art-011', name: 'Jacob', initials: 'JA', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Artist' },
+  // Art — Last Light team
+  { id: 'art-001', name: 'Bryan N', initials: 'BN', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Artist', team: 'last-light' },
+  { id: 'art-002', name: 'Mia C', initials: 'MC', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Artist', team: 'last-light' },
+  { id: 'art-003', name: 'Keolani B', initials: 'KB', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Artist', team: 'last-light' },
+  { id: 'art-004', name: 'Pedro S', initials: 'PS', dept: 'art', type: 'intern', status: 'active', location: 'Remote', role: 'Art Intern', team: 'last-light' },
+  // Art — Corebound team
+  { id: 'art-005', name: 'Hailey H', initials: 'HH', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Artist', team: 'corebound' },
+  { id: 'art-006', name: 'Liz P', initials: 'LP', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Artist', team: 'corebound' },
+  { id: 'art-007', name: 'Ray P', initials: 'RP', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Artist', team: 'corebound' },
+  { id: 'art-008', name: 'Juno TC', initials: 'JT', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Artist', team: 'corebound' },
+  // Art — Big Boss Cleanup team
+  { id: 'art-009', name: 'Chris C', initials: 'CC', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Lead Artist', team: 'big-boss-cleanup' },
+  { id: 'art-010', name: 'Luna', initials: 'LU', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Artist', team: 'big-boss-cleanup' },
+  { id: 'art-011', name: 'Jacob', initials: 'JA', dept: 'art', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Artist', team: 'big-boss-cleanup' },
 
-  // UI/UX
-  { id: 'ux-001', name: 'Tessa L', initials: 'TL', dept: 'uiux', type: 'revenue-share', status: 'active', location: 'Remote', role: 'UI/UX Lead' },
-  { id: 'ux-002', name: 'Adam M', initials: 'AM', dept: 'uiux', type: 'intern', status: 'active', location: 'Remote', role: 'UI/UX Eng Intern' },
-  { id: 'ux-003', name: 'Katie L', initials: 'KL', dept: 'uiux', type: 'intern', status: 'active', location: 'Remote', role: 'UI/UX + SM Intern' },
+  // UI/UX — General Studio
+  { id: 'ux-001', name: 'Tessa L', initials: 'TL', dept: 'uiux', type: 'revenue-share', status: 'active', location: 'Remote', role: 'UI/UX Lead', team: 'studio' },
+  { id: 'ux-002', name: 'Adam M', initials: 'AM', dept: 'uiux', type: 'intern', status: 'active', location: 'Remote', role: 'UI/UX Eng Intern', team: 'studio' },
+  { id: 'ux-003', name: 'Katie L', initials: 'KL', dept: 'uiux', type: 'intern', status: 'active', location: 'Remote', role: 'UI/UX + SM Intern', team: 'studio' },
 
-  // Audio & Voice
-  { id: 'aud-001', name: 'Schwa', initials: 'SW', dept: 'audio', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Sound' },
-  { id: 'aud-002', name: 'Ayako', initials: 'AK', dept: 'audio', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Sound' },
-  { id: 'aud-003', name: 'Sandy C', initials: 'SC', dept: 'audio', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Music' },
-  { id: 'aud-004', name: 'Lauren P', initials: 'LP', dept: 'audio', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Narration' },
-  { id: 'aud-005', name: 'Michael TB', initials: 'MT', dept: 'audio', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Voice' },
-  { id: 'aud-006', name: 'Janey', initials: 'JN', dept: 'audio', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Voice' },
-  { id: 'aud-007', name: 'Emmanuel', initials: 'EM', dept: 'audio', type: 'revenue-share', status: 'active', location: 'Remote', role: '2nd Voice' },
+  // Audio & Voice — General Studio
+  { id: 'aud-001', name: 'Schwa', initials: 'SW', dept: 'audio', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Sound', team: 'studio' },
+  { id: 'aud-002', name: 'Ayako', initials: 'AK', dept: 'audio', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Sound', team: 'studio' },
+  { id: 'aud-003', name: 'Sandy C', initials: 'SC', dept: 'audio', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Music', team: 'studio' },
+  { id: 'aud-004', name: 'Lauren P', initials: 'LP', dept: 'audio', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Narration', team: 'studio' },
+  { id: 'aud-005', name: 'Michael TB', initials: 'MT', dept: 'audio', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Voice', team: 'studio' },
+  { id: 'aud-006', name: 'Janey', initials: 'JN', dept: 'audio', type: 'revenue-share', status: 'active', location: 'Remote', role: 'Voice', team: 'studio' },
+  { id: 'aud-007', name: 'Emmanuel', initials: 'EM', dept: 'audio', type: 'revenue-share', status: 'active', location: 'Remote', role: '2nd Voice', team: 'studio' },
+]
+
+// ─── PROJECT TEAMS ────────────────────────────────────────────────────────────
+export const TEAMS = [
+  { id: 'studio',          label: 'General Studio',  color: 'purple', icon: '◈', desc: 'Studio operations, UI/UX, audio & voice — cross-project support' },
+  { id: 'last-light',      label: 'Last Light',      color: 'teal',   icon: '◐', desc: 'Art, design, and engineering for Last Light' },
+  { id: 'corebound',       label: 'Corebound',       color: 'blue',   icon: '◉', desc: 'Art, design, and engineering for Corebound' },
+  { id: 'big-boss-cleanup',label: 'Big Boss Cleanup', color: 'amber',  icon: '◎', desc: 'Art, design, and engineering for Big Boss Cleanup' },
 ]
 
 // ─── OPEN ROLES ───────────────────────────────────────────────────────────────

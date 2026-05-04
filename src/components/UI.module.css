@@ -104,6 +104,8 @@
 .tag-amber { background: var(--k8-amber-light); color: var(--k8-amber); }
 .tag-red { background: var(--k8-danger-light); color: var(--k8-danger); }
 .tag-blue { background: var(--k8-blue-light); color: var(--k8-blue); }
+.tag-teal { background: var(--k8-teal-light); color: var(--k8-teal); }
+.tag-coral { background: var(--k8-coral-light); color: var(--k8-coral); }
 
 .avatar {
   border-radius: 50%;
@@ -114,6 +116,7 @@
   flex-shrink: 0;
 }
 
+.av-xs { width: 20px; height: 20px; font-size: 8px; }
 .av-sm { width: 28px; height: 28px; font-size: 10px; }
 .av-md { width: 34px; height: 34px; font-size: 12px; }
 .av-lg { width: 44px; height: 44px; font-size: 14px; }

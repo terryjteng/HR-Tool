@@ -1,22 +1,21 @@
 import styles from './Sidebar.module.css'
 
-// Compliance: 2 critical + 8 high = 10 open issues
-// Documents: 4 items with non-current status (pending-sigs, expiring, needs-update, draft)
 const NAV = [
   { section: 'Core', items: [
-    { id: 'dashboard', icon: '⊞', label: 'Dashboard' },
-    { id: 'people', icon: '◎', label: 'People', badge: '33' },
-    { id: 'org', icon: '⌥', label: 'Org Chart' },
-    { id: 'docs', icon: '≡', label: 'Documents', badge: '4', badgeWarn: true },
+    { id: 'dashboard',  icon: '⊞', label: 'Dashboard' },
+    { id: 'people',     icon: '◎', label: 'People',     badge: '33' },
+    { id: 'org',        icon: '⌥', label: 'Org Chart' },
+    { id: 'docs',       icon: '≡', label: 'Documents',  badge: '4', badgeWarn: true },
+    { id: 'handbooks',  icon: '📖', label: 'Handbooks',  badge: '3' },
   ]},
   { section: 'Operations', items: [
     { id: 'compliance', icon: '✓', label: 'Compliance', badge: '10', badgeWarn: true },
-    { id: 'hiring', icon: '+', label: 'Hiring', badge: '1' },
+    { id: 'hiring',     icon: '+', label: 'Hiring',     badge: '1' },
     { id: 'onboarding', icon: '→', label: 'Onboarding' },
   ]},
   { section: 'Integrations', items: [
     { id: 'integrations', icon: '⟳', label: 'Connections' },
-    { id: 'ea', icon: '◈', label: 'EA Agent', badge: '●', badgeLive: true },
+    { id: 'ea',           icon: '◈', label: 'EA Agent',  badge: '●', badgeLive: true },
   ]},
 ]
 

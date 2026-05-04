@@ -9,18 +9,20 @@ import Hiring from './pages/Hiring.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import Integrations from './pages/Integrations.jsx'
 import EAAgent from './pages/EAAgent.jsx'
+import Handbooks from './pages/Handbooks.jsx'
 import styles from './App.module.css'
 
 const PAGES = {
-  dashboard: Dashboard,
-  people: People,
-  org: OrgChart,
-  docs: Documents,
-  compliance: Compliance,
-  hiring: Hiring,
-  onboarding: Onboarding,
+  dashboard:   Dashboard,
+  people:      People,
+  org:         OrgChart,
+  docs:        Documents,
+  compliance:  Compliance,
+  hiring:      Hiring,
+  onboarding:  Onboarding,
   integrations: Integrations,
-  ea: EAAgent,
+  ea:          EAAgent,
+  handbooks:   Handbooks,
 }
 
 export default function App() {
