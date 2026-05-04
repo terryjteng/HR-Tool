@@ -12,8 +12,8 @@ export function PageHeader({ title, subtitle, actions }) {
   )
 }
 
-export function Card({ children, className = '' }) {
-  return <div className={`${styles.card} ${className}`}>{children}</div>
+export function Card({ children, className = '', style }) {
+  return <div className={`${styles.card} ${className}`} style={style}>{children}</div>
 }
 
 export function CardHeader({ title, action, onAction }) {

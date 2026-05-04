@@ -448,7 +448,474 @@ app.delete('/api/actions/:id', (req, res) => {
   res.json({ ok: true })
 })
 
-// ─── Serve built frontend in production ──────────────────────���────────────────
+// ─── Document Signing Platform ───────────────────────────────────────────────
+
+const SIGNING_FILE = join(__dirname, 'signing.json')
+
+function loadSigning() {
+  if (!existsSync(SIGNING_FILE)) return []
+  try { return JSON.parse(readFileSync(SIGNING_FILE, 'utf8')) } catch { return [] }
+}
+function saveSigning(docs) { writeFileSync(SIGNING_FILE, JSON.stringify(docs, null, 2)) }
+
+function makeToken() { return randomUUID().replace(/-/g, '').slice(0, 20) }
+
+// ─── Document content generators ─────────────────────────────────────────────
+
+function fmtDate(iso) {
+  return new Date(iso || Date.now()).toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })
+}
+
+function docContent(templateId, r, iso) {
+  const d = fmtDate(iso)
+  const pct = r.revenueSharePct || '___%'
+  switch (templateId) {
+    case 'revenue-share': return `
+<h2>REVENUE SHARE AGREEMENT</h2>
+<p class="doc-meta">Kato.8 Studios · Mission Hills, California · Effective ${d}</p>
+<p>This Revenue Share Agreement ("Agreement") is entered into as of <strong>${d}</strong> between <strong>Kato.8 Studios</strong>, a California-based creative studio ("Studio"), and <strong>${r.name}</strong> ("Collaborator").</p>
+<h3>1. Engagement</h3>
+<p>Studio engages Collaborator to provide <strong>${r.role}</strong> services for the Studio's projects on a revenue-share basis. This is not an employment agreement. Collaborator is an independent collaborator as defined under CA AB 5 creative professional provisions.</p>
+<h3>2. Compensation</h3>
+<p>Studio agrees to pay Collaborator <strong>${pct}%</strong> of net studio revenue. "Net revenue" means gross revenue received by Studio, less platform fees, payment processing fees, and direct production costs agreed upon in writing. Payouts occur within 60 days of each revenue event exceeding $500. No advances or guarantees are provided.</p>
+<h3>3. Intellectual Property</h3>
+<p>All creative work, concepts, designs, code, audio, and deliverables produced by Collaborator under this Agreement are works made for hire and are the exclusive property of Kato.8 Studios. To the extent any work is not a work made for hire by operation of law, Collaborator hereby irrevocably assigns all right, title, and interest to Studio.</p>
+<h3>4. Confidentiality</h3>
+<p>Collaborator shall keep all project details, business information, and unreleased materials strictly confidential. This obligation survives termination of this Agreement.</p>
+<h3>5. Term &amp; Termination</h3>
+<p>This Agreement is at-will. Either party may terminate with 30 days written notice. Upon termination, Collaborator's revenue share entitlement for work completed prior to termination continues per the schedule above. All IP remains with Studio.</p>
+<h3>6. Governing Law</h3>
+<p>This Agreement is governed by the laws of the State of California. Any dispute shall be resolved in Los Angeles County, California.</p>
+<p class="sig-block"><strong>Studio:</strong> Terry Teng, Founder &amp; CEO — Kato.8 Studios &nbsp;&nbsp;&nbsp; <strong>Collaborator:</strong> ${r.name}</p>`
+
+    case 'ip-assignment': return `
+<h2>INTELLECTUAL PROPERTY ASSIGNMENT AGREEMENT</h2>
+<p class="doc-meta">Kato.8 Studios · Mission Hills, California · Effective ${d}</p>
+<p>This IP Assignment Agreement ("Agreement") is entered into as of <strong>${d}</strong> between <strong>Kato.8 Studios</strong> ("Studio") and <strong>${r.name}</strong> ("Assignor").</p>
+<h3>1. Assignment of IP</h3>
+<p>Assignor hereby irrevocably assigns and transfers to Studio all right, title, and interest in and to all Intellectual Property created, developed, or conceived by Assignor in connection with any Studio project, including but not limited to: concept art, character designs, environment designs, animations, code, scripts, audio compositions, sound effects, voice recordings, and all derivative works thereof.</p>
+<h3>2. Works Made for Hire</h3>
+<p>To the extent permitted by law, all works created by Assignor for Studio are "works made for hire" under the U.S. Copyright Act. To the extent any work is not a work made for hire, Assignor assigns all copyright and related rights to Studio effective as of the date of creation.</p>
+<h3>3. Moral Rights Waiver</h3>
+<p>To the maximum extent permitted by law, Assignor waives any moral rights or rights of attribution in and to the assigned works.</p>
+<h3>4. Representations</h3>
+<p>Assignor represents that: (a) Assignor has full right and authority to make this assignment; (b) the assigned works do not infringe any third party's rights; and (c) Assignor has not previously assigned or encumbered any rights herein.</p>
+<h3>5. Continuing Obligation</h3>
+<p>This assignment applies to all works created during Assignor's engagement with Studio and survives termination of any other agreement between the parties.</p>
+<h3>6. Governing Law</h3>
+<p>This Agreement is governed by California law. Disputes shall be resolved in Los Angeles County, California.</p>
+<p class="sig-block"><strong>Studio:</strong> Terry Teng, Founder &amp; CEO — Kato.8 Studios &nbsp;&nbsp;&nbsp; <strong>Assignor:</strong> ${r.name}</p>`
+
+    case 'nda': return `
+<h2>NON-DISCLOSURE AGREEMENT</h2>
+<p class="doc-meta">Kato.8 Studios · Mission Hills, California · Effective ${d}</p>
+<p>This Non-Disclosure Agreement ("Agreement") is entered into as of <strong>${d}</strong> between <strong>Kato.8 Studios</strong> ("Disclosing Party") and <strong>${r.name}</strong> ("Receiving Party").</p>
+<h3>1. Confidential Information</h3>
+<p>"Confidential Information" means all non-public information disclosed by Studio to Receiving Party, including: unreleased game projects and titles, gameplay mechanics, art and design assets, business strategies, financial information, partner relationships, source code, and any information designated as confidential. This includes but is not limited to the projects: Last Light, Corebound, and Big Boss Cleanup.</p>
+<h3>2. Obligations</h3>
+<p>Receiving Party agrees to: (a) hold all Confidential Information in strict confidence; (b) not disclose Confidential Information to any third party without prior written consent; (c) use Confidential Information solely for purposes of Receiving Party's engagement with Studio; (d) not post, publish, or share any Confidential Information on social media, Discord, or any public channel.</p>
+<h3>3. Exceptions</h3>
+<p>Obligations do not apply to information that: (a) is or becomes publicly known through no breach by Receiving Party; (b) was rightfully known to Receiving Party before disclosure; (c) is required to be disclosed by law or court order (with prompt written notice to Studio).</p>
+<h3>4. Term</h3>
+<p>This Agreement is effective from ${d} and obligations survive for <strong>3 years</strong> following termination of Receiving Party's engagement with Studio.</p>
+<h3>5. Remedies</h3>
+<p>Receiving Party acknowledges that breach may cause irreparable harm for which monetary damages are inadequate, and Studio shall be entitled to seek injunctive relief in addition to any other available remedies.</p>
+<h3>6. Governing Law</h3>
+<p>This Agreement is governed by California law. Jurisdiction is Los Angeles County, California.</p>
+<p class="sig-block"><strong>Disclosing Party:</strong> Terry Teng, Founder &amp; CEO — Kato.8 Studios &nbsp;&nbsp;&nbsp; <strong>Receiving Party:</strong> ${r.name}</p>`
+
+    case 'offer-letter': return `
+<h2>COLLABORATOR OFFER LETTER</h2>
+<p class="doc-meta">Kato.8 Studios · Mission Hills, California · ${d}</p>
+<p>Dear <strong>${r.name}</strong>,</p>
+<p>We are excited to welcome you to <strong>Kato.8 Studios</strong>! This letter confirms the terms of your engagement as a revenue-share collaborator.</p>
+<h3>Role Details</h3>
+<table class="offer-table">
+  <tr><td>Role / Title</td><td><strong>${r.role}</strong></td></tr>
+  <tr><td>Department</td><td>${r.dept || '—'}</td></tr>
+  <tr><td>Project Team</td><td>${r.team || '—'}</td></tr>
+  <tr><td>Reporting to</td><td>${r.lead || 'Terry Teng'}</td></tr>
+  <tr><td>Start Date</td><td>${r.startDate ? fmtDate(r.startDate + 'T00:00:00') : '—'}</td></tr>
+  <tr><td>Compensation</td><td>Revenue share — <strong>${pct}%</strong> of net studio revenue</td></tr>
+  <tr><td>Engagement Type</td><td>Revenue-share collaborator (not employment) · At-will</td></tr>
+  <tr><td>Location</td><td>${r.location || 'Remote'}</td></tr>
+</table>
+<h3>Compensation</h3>
+<p>Your compensation is <strong>${pct}%</strong> of net studio revenue as defined in your Revenue Share Agreement. This is a revenue-share arrangement, not a salary or wage. No compensation is guaranteed until revenue events occur per the Revenue Share Agreement terms.</p>
+<h3>Required Agreements</h3>
+<p>Before beginning any work, please sign the following documents (sent separately via DocuSign / Studio Signing):</p>
+<ul><li>Revenue Share Agreement</li><li>Intellectual Property Assignment Agreement</li><li>Non-Disclosure Agreement</li></ul>
+<h3>Next Steps</h3>
+<p>Your onboarding team will reach out to schedule your Day 1 orientation. If you have any questions, contact Terry Teng at terryt@kato8studios.com or on Discord.</p>
+<p>We look forward to building together.</p>
+<p>Warmly,<br/><strong>Terry Teng</strong><br/>Founder &amp; CEO, Kato.8 Studios<br/>terryt@kato8studios.com</p>
+<p class="sig-block"><strong>Accepted by:</strong> ${r.name} &nbsp;&nbsp;&nbsp; <strong>Date:</strong> ____________</p>`
+
+    default: return '<p>Unknown document template.</p>'
+  }
+}
+
+// ─── Public signing page (served as HTML) ────────────────────────────────────
+
+function signingPageHTML(doc) {
+  const content = docContent(doc.templateId, doc.recipient, doc.createdAt)
+  const isSigned  = doc.status === 'signed'
+  const isDeclined = doc.status === 'declined'
+  const isActive   = doc.status === 'sent' || doc.status === 'draft'
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${doc.title} — Kato.8 Studios</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F4F3F0;color:#1a1a2e;min-height:100vh}
+.top-bar{background:#1a1a2e;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:14px}
+.top-logo{width:36px;height:36px;border-radius:10px;background:#7C3AED;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff}
+.top-title{font-size:14px;font-weight:500;flex:1}
+.top-status{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600}
+.status-sent{background:#FAEEDA;color:#854F0B}
+.status-signed{background:#E1F5EE;color:#0F6E56}
+.status-declined{background:#FEE2E2;color:#991B1B}
+.banner{padding:10px 24px;font-size:13px;text-align:center;font-weight:500}
+.banner-signed{background:#E1F5EE;color:#0F6E56;border-bottom:1px solid #5DCAA5}
+.banner-declined{background:#FEE2E2;color:#991B1B;border-bottom:1px solid #FCA5A5}
+.wrapper{max-width:820px;margin:0 auto;padding:24px 16px 80px}
+.doc-card{background:#fff;border-radius:12px;border:1px solid #E5E3DF;padding:40px 48px;margin-bottom:20px;line-height:1.7}
+.doc-card h2{font-size:20px;font-weight:700;color:#1a1a2e;margin-bottom:4px;text-align:center}
+.doc-card h3{font-size:14px;font-weight:600;color:#1a1a2e;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #E5E3DF}
+.doc-card p{font-size:13px;color:#444;margin-bottom:10px}
+.doc-meta{text-align:center;font-size:12px;color:#888;margin-bottom:24px!important;padding-bottom:16px;border-bottom:2px solid #1a1a2e}
+.sig-block{background:#F9F8F6;padding:12px;border-radius:8px;font-size:12px;margin-top:24px!important;border:1px dashed #ccc}
+.offer-table{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0}
+.offer-table td{padding:8px 12px;border-bottom:0.5px solid #E5E3DF}
+.offer-table td:first-child{color:#666;font-size:12px;width:140px}
+.doc-card ul{padding-left:20px;font-size:13px;color:#444;margin-bottom:10px}
+.doc-card ul li{margin-bottom:4px}
+.sign-card{background:#fff;border-radius:12px;border:1px solid #E5E3DF;padding:28px 32px}
+.sign-card h3{font-size:15px;font-weight:600;margin-bottom:6px}
+.sign-card p{font-size:13px;color:#666;margin-bottom:16px}
+.name-row{margin-bottom:14px}
+.name-row label{display:block;font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px}
+.name-row input{width:100%;padding:10px 12px;border:1.5px solid #D1CEC9;border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border 0.15s}
+.name-row input:focus{border-color:#7C3AED}
+.canvas-wrap{position:relative;border:2px dashed #D1CEC9;border-radius:10px;background:#FAFAFA;cursor:crosshair;margin-bottom:8px;overflow:hidden}
+.canvas-wrap:hover{border-color:#7C3AED}
+#sigCanvas{display:block;width:100%;height:180px}
+.canvas-hint{text-align:center;font-size:11px;color:#aaa;margin-bottom:14px}
+.btn-row{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.btn{padding:10px 22px;border-radius:24px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;font-family:inherit}
+.btn-ghost{background:#F4F3F0;color:#444;border:1.5px solid #D1CEC9}
+.btn-ghost:hover{border-color:#888}
+.btn-danger{background:#FEE2E2;color:#991B1B;border:1.5px solid #FCA5A5}
+.btn-danger:hover{background:#FECACA}
+.btn-primary{background:#7C3AED;color:#fff}
+.btn-primary:hover{opacity:0.88}
+.btn-primary:disabled{opacity:0.45;cursor:default}
+.error{font-size:12px;color:#991B1B;margin-top:8px;min-height:18px}
+.success-card{background:#E1F5EE;border-radius:12px;padding:32px;text-align:center;border:1px solid #5DCAA5}
+.success-card h3{font-size:18px;color:#0F6E56;margin-bottom:8px}
+.success-card p{font-size:13px;color:#0F6E56;margin-bottom:14px}
+.signed-details{background:#F4F3F0;border-radius:8px;padding:12px 16px;font-size:12px;color:#666;margin-top:12px;text-align:left}
+.print-btn{margin-top:14px;background:#fff;color:#0F6E56;border:1.5px solid #5DCAA5;padding:8px 20px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.footer{text-align:center;padding:20px;font-size:11px;color:#aaa}
+@media print{.sign-card,.top-bar .top-status{display:none}.top-bar{background:#fff;color:#1a1a2e;border-bottom:2px solid #1a1a2e}.doc-card{border:none;padding:0}}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div class="top-logo">K8</div>
+  <div class="top-title">${doc.title} · Kato.8 Studios Document Signing</div>
+  <span class="top-status status-${doc.status}">${doc.status.toUpperCase()}</span>
+</div>
+${isSigned  ? `<div class="banner banner-signed">✓ Signed by ${doc.signerName || doc.recipient.name} on ${fmtDate(doc.signedAt)}</div>` : ''}
+${isDeclined ? `<div class="banner banner-declined">✗ This document was declined on ${fmtDate(doc.declinedAt)}</div>` : ''}
+<div class="wrapper">
+  <div class="doc-card">${content}</div>
+  ${isSigned ? `
+  <div class="success-card">
+    <h3>✓ Document Signed</h3>
+    <p>Signed by <strong>${doc.signerName}</strong> · ${fmtDate(doc.signedAt)}</p>
+    ${doc.signature ? `<img src="${doc.signature}" style="border:1px solid #5DCAA5;border-radius:8px;max-width:300px;background:#fff;padding:8px;margin-top:8px" alt="Signature"/>` : ''}
+    <br/><button class="print-btn" onclick="window.print()">Download / Print PDF</button>
+  </div>` : ''}
+  ${isDeclined ? `<div class="success-card" style="background:#FEE2E2;border-color:#FCA5A5"><h3 style="color:#991B1B">Document Declined</h3><p style="color:#991B1B">This document was declined. The studio has been notified.</p></div>` : ''}
+  ${isActive ? `
+  <div class="sign-card">
+    <h3>Sign this document</h3>
+    <p>By signing, you confirm you have read and agree to the terms above.</p>
+    <div class="name-row">
+      <label>Full name (to confirm identity)</label>
+      <input type="text" id="signerName" placeholder="Type your full legal name" autocomplete="name" />
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="sigCanvas"></canvas>
+    </div>
+    <div class="canvas-hint">Draw your signature above · <button class="btn btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearCanvas()">Clear</button></div>
+    <div class="btn-row">
+      <button class="btn btn-danger" onclick="declineDoc()">Decline</button>
+      <button class="btn btn-primary" id="signBtn" onclick="submitSig()">Sign Document →</button>
+    </div>
+    <div class="error" id="errMsg"></div>
+  </div>` : ''}
+</div>
+<div class="footer">Kato.8 Studios · Document Signing Platform · terryt@kato8studios.com</div>
+<script>
+const TOKEN = '${doc.token}';
+const API = window.location.origin;
+const canvas = document.getElementById('sigCanvas');
+const ctx = canvas ? canvas.getContext('2d') : null;
+let drawing = false;
+if (canvas) {
+  canvas.width = canvas.offsetWidth; canvas.height = 180;
+  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  function pos(e) {
+    const r = canvas.getBoundingClientRect();
+    const sc = canvas.width / r.width;
+    return { x:(e.clientX-r.left)*sc, y:(e.clientY-r.top)*sc };
+  }
+  canvas.addEventListener('mousedown', e => { drawing=true; const p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); });
+  canvas.addEventListener('mousemove', e => { if(!drawing)return; const p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); });
+  canvas.addEventListener('mouseup', ()=>drawing=false);
+  canvas.addEventListener('mouseleave', ()=>drawing=false);
+  canvas.addEventListener('touchstart', e=>{ e.preventDefault(); drawing=true; const p=pos(e.touches[0]); ctx.beginPath(); ctx.moveTo(p.x,p.y); },{passive:false});
+  canvas.addEventListener('touchmove', e=>{ e.preventDefault(); if(!drawing)return; const p=pos(e.touches[0]); ctx.lineTo(p.x,p.y); ctx.stroke(); },{passive:false});
+  canvas.addEventListener('touchend', ()=>drawing=false);
+  window.addEventListener('resize', ()=>{ const d=ctx.getImageData(0,0,canvas.width,canvas.height); canvas.width=canvas.offsetWidth; ctx.putImageData(d,0,0); ctx.strokeStyle='#1a1a2e'; ctx.lineWidth=2.2; ctx.lineCap='round'; ctx.lineJoin='round'; });
+}
+function clearCanvas() { if(ctx) ctx.clearRect(0,0,canvas.width,canvas.height); }
+function isEmpty() { if(!ctx)return true; const d=ctx.getImageData(0,0,canvas.width,canvas.height).data; return !Array.from(d).some(v=>v!==0); }
+async function submitSig() {
+  const name = document.getElementById('signerName').value.trim();
+  const err = document.getElementById('errMsg');
+  err.textContent = '';
+  if (!name) { err.textContent = 'Please type your full name to confirm identity.'; return; }
+  if (isEmpty()) { err.textContent = 'Please draw your signature above.'; return; }
+  const sig = canvas.toDataURL('image/png');
+  const btn = document.getElementById('signBtn');
+  btn.textContent = 'Signing…'; btn.disabled = true;
+  try {
+    const res = await fetch(API + '/api/signing/token/' + TOKEN + '/sign', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ signature: sig, signerName: name })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.querySelector('.sign-card').outerHTML = '<div class="success-card"><h3>✓ Document Signed</h3><p>Thank you, <strong>'+name+'</strong>. Your signature has been recorded. Kato.8 Studios will be in touch.</p><img src="'+sig+'" style="border:1px solid #5DCAA5;border-radius:8px;max-width:300px;background:#fff;padding:8px;margin-top:12px;display:block;margin-left:auto;margin-right:auto" alt="Signature"/><br/><button class="print-btn" onclick="window.print()">Download / Print PDF</button></div>';
+    } else { err.textContent = 'Error: ' + (data.error || 'Unknown error'); btn.textContent='Sign Document →'; btn.disabled=false; }
+  } catch(e) { err.textContent='Connection error. Please try again.'; btn.textContent='Sign Document →'; btn.disabled=false; }
+}
+async function declineDoc() {
+  if (!confirm('Are you sure you want to decline this document?')) return;
+  try {
+    await fetch(API + '/api/signing/token/' + TOKEN + '/decline', { method:'POST' });
+    document.querySelector('.sign-card').outerHTML = '<div class="success-card" style="background:#FEE2E2;border-color:#FCA5A5"><h3 style="color:#991B1B">Document Declined</h3><p style="color:#991B1B">You have declined to sign. Kato.8 Studios has been notified.</p></div>';
+  } catch(e) { alert('Error. Please try again.'); }
+}
+</script>
+</body>
+</html>`
+}
+
+// ─── Signing REST endpoints ───────────────────────────────────────────────────
+
+app.get('/api/signing', (_req, res) => res.json(loadSigning()))
+
+app.post('/api/signing', (req, res) => {
+  const docs = loadSigning()
+  const now = new Date().toISOString()
+  const doc = {
+    id: randomUUID(),
+    token: makeToken(),
+    templateId: req.body.templateId || 'revenue-share',
+    title: req.body.title || 'Document',
+    recipient: req.body.recipient || {},
+    status: 'sent',
+    createdAt: now,
+    sentAt: now,
+    signedAt: null,
+    declinedAt: null,
+    signature: null,
+    signerName: null,
+  }
+  doc.signingUrl = `http://localhost:3001/sign/${doc.token}`
+  docs.unshift(doc)
+  saveSigning(docs)
+  res.json(doc)
+})
+
+app.get('/api/signing/:id', (req, res) => {
+  const doc = loadSigning().find(d => d.id === req.params.id)
+  if (!doc) return res.status(404).json({ error: 'not found' })
+  res.json(doc)
+})
+
+app.patch('/api/signing/:id', (req, res) => {
+  const docs = loadSigning()
+  const idx = docs.findIndex(d => d.id === req.params.id)
+  if (idx === -1) return res.status(404).json({ error: 'not found' })
+  docs[idx] = { ...docs[idx], ...req.body, id: docs[idx].id, token: docs[idx].token }
+  saveSigning(docs)
+  res.json(docs[idx])
+})
+
+app.delete('/api/signing/:id', (req, res) => {
+  const docs = loadSigning()
+  const filtered = docs.filter(d => d.id !== req.params.id)
+  if (filtered.length === docs.length) return res.status(404).json({ error: 'not found' })
+  saveSigning(filtered)
+  res.json({ ok: true })
+})
+
+// Public: get doc by token (JSON — for signing page AJAX on initial load check)
+app.get('/api/signing/token/:token', (req, res) => {
+  const doc = loadSigning().find(d => d.token === req.params.token)
+  if (!doc) return res.status(404).json({ error: 'not found' })
+  const { signature, ...safe } = doc  // don't expose signature in GET
+  res.json(safe)
+})
+
+// Public: submit signature
+app.post('/api/signing/token/:token/sign', (req, res) => {
+  const docs = loadSigning()
+  const idx = docs.findIndex(d => d.token === req.params.token)
+  if (idx === -1) return res.status(404).json({ error: 'Document not found' })
+  if (docs[idx].status === 'signed') return res.json({ success: true, alreadySigned: true })
+  if (docs[idx].status === 'declined') return res.status(400).json({ error: 'Document was declined' })
+  docs[idx].status = 'signed'
+  docs[idx].signedAt = new Date().toISOString()
+  docs[idx].signature = req.body.signature || null
+  docs[idx].signerName = req.body.signerName || docs[idx].recipient.name
+  saveSigning(docs)
+  res.json({ success: true })
+})
+
+// Public: decline document
+app.post('/api/signing/token/:token/decline', (req, res) => {
+  const docs = loadSigning()
+  const idx = docs.findIndex(d => d.token === req.params.token)
+  if (idx === -1) return res.status(404).json({ error: 'not found' })
+  docs[idx].status = 'declined'
+  docs[idx].declinedAt = new Date().toISOString()
+  saveSigning(docs)
+  res.json({ success: true })
+})
+
+// Public: signing HTML page
+app.get('/sign/:token', (req, res) => {
+  const doc = loadSigning().find(d => d.token === req.params.token)
+  if (!doc) {
+    return res.status(404).send(`<!DOCTYPE html><html><body style="font-family:sans-serif;padding:40px;text-align:center">
+      <h2>Document not found</h2><p>This signing link is invalid or has expired.</p>
+      <p><a href="http://localhost:5173">Back to HR Platform</a></p></body></html>`)
+  }
+  res.setHeader('Content-Type', 'text/html')
+  res.send(signingPageHTML(doc))
+})
+
+// ─── Google Drive Integration ─────────────────────────────────────────────────
+// Setup: add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env
+// Then click "Connect Google Drive" in the HR platform
+// Redirect URI: http://localhost:3001/auth/google/callback
+
+import { google } from 'googleapis'
+import { createWriteStream } from 'fs'
+
+const TOKENS_FILE = join(__dirname, 'google_tokens.json')
+
+function loadTokens() {
+  if (!existsSync(TOKENS_FILE)) return null
+  try { return JSON.parse(readFileSync(TOKENS_FILE, 'utf8')) } catch { return null }
+}
+function saveTokens(t) { writeFileSync(TOKENS_FILE, JSON.stringify(t, null, 2)) }
+
+function getDriveClient() {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) return null
+  const auth = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    'http://localhost:3001/auth/google/callback'
+  )
+  const tokens = loadTokens()
+  if (tokens) auth.setCredentials(tokens)
+  return auth
+}
+
+// Status: check if Drive is connected
+app.get('/api/drive/status', async (req, res) => {
+  const auth = getDriveClient()
+  if (!auth) return res.json({ connected: false, reason: 'no_credentials' })
+  const tokens = loadTokens()
+  if (!tokens) return res.json({ connected: false, reason: 'not_authorized' })
+  try {
+    const drive = google.drive({ version: 'v3', auth })
+    const about = await drive.about.get({ fields: 'user' })
+    res.json({ connected: true, email: about.data.user.emailAddress, name: about.data.user.displayName })
+  } catch (err) {
+    res.json({ connected: false, reason: 'auth_error', error: err.message })
+  }
+})
+
+// Start OAuth flow
+app.get('/auth/google', (req, res) => {
+  const auth = getDriveClient()
+  if (!auth) return res.status(400).send('Google OAuth credentials not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env')
+  const url = auth.generateAuthUrl({
+    access_type: 'offline',
+    scope: ['https://www.googleapis.com/auth/drive.readonly', 'https://www.googleapis.com/auth/drive.metadata.readonly'],
+    prompt: 'consent',
+  })
+  res.redirect(url)
+})
+
+// OAuth callback
+app.get('/auth/google/callback', async (req, res) => {
+  const { code, error } = req.query
+  if (error) return res.redirect('http://localhost:5173?drive_error=' + error)
+  const auth = getDriveClient()
+  if (!auth) return res.status(400).send('OAuth not configured')
+  try {
+    const { tokens } = await auth.getToken(code)
+    saveTokens(tokens)
+    res.redirect('http://localhost:5173?drive_connected=1')
+  } catch (err) {
+    res.redirect('http://localhost:5173?drive_error=' + encodeURIComponent(err.message))
+  }
+})
+
+// List Drive files
+app.get('/api/drive/files', async (req, res) => {
+  const auth = getDriveClient()
+  if (!auth || !loadTokens()) return res.status(401).json({ error: 'Drive not connected' })
+  try {
+    const drive = google.drive({ version: 'v3', auth })
+    const q = req.query.q || ''
+    const params = {
+      pageSize: 50,
+      fields: 'files(id,name,mimeType,size,modifiedTime,webViewLink,parents)',
+      orderBy: 'modifiedTime desc',
+    }
+    if (q) params.q = `name contains '${q.replace(/'/g, "\\'")}' and trashed=false`
+    else params.q = 'trashed=false'
+    if (req.query.folder) params.q += ` and '${req.query.folder}' in parents`
+    const result = await drive.files.list(params)
+    res.json(result.data.files || [])
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// Disconnect Drive
+app.post('/api/drive/disconnect', (req, res) => {
+  if (existsSync(TOKENS_FILE)) {
+    try { require('fs').unlinkSync(TOKENS_FILE) } catch {}
+  }
+  res.json({ ok: true })
+})
+
+// ─── Serve built frontend in production ──────────────────────────────────────
 
 const distPath = join(__dirname, 'dist')
 if (existsSync(distPath)) {

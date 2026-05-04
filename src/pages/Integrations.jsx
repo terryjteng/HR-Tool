@@ -1,11 +1,24 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { INTEGRATIONS } from '../data/studioData.js'
 import { PageHeader, PageContent, Card, Tag, Button, EATrigger } from '../components/UI.jsx'
 import styles from './Pages.module.css'
 
 export default function Integrations() {
   const [selected, setSelected] = useState('docusign')
+  const [driveStatus, setDriveStatus] = useState(null) // null=loading, true=connected, false=not connected
   const int = INTEGRATIONS.find(i => i.id === selected) || INTEGRATIONS[0]
+
+  useEffect(() => {
+    fetch('http://localhost:3001/api/drive/status')
+      .then(r => r.json())
+      .then(d => setDriveStatus(!!d.connected))
+      .catch(() => setDriveStatus(false))
+  }, [])
+
+  const disconnectDrive = () => {
+    fetch('http://localhost:3001/api/drive/disconnect', { method: 'POST' })
+      .then(() => setDriveStatus(false))
+  }
 
   const PRIORITY_LABELS = { 1:'Set up now', 2:'This week', 3:'This month' }
 
@@ -91,6 +104,35 @@ export default function Integrations() {
                   <div className={styles.stepText}>{step.text}</div>
                 </div>
               ))}
+
+              {selected === 'gdrive' && (
+                <div className={styles.driveConnectBox}>
+                  <div style={{ fontSize: 22 }}>📁</div>
+                  <div className={styles.driveConnectInfo}>
+                    {driveStatus === null && 'Checking Google Drive connection…'}
+                    {driveStatus === true && (
+                      <><strong>Google Drive connected</strong> — terryt.kato.8@gmail.com</>
+                    )}
+                    {driveStatus === false && (
+                      <><strong>Connect Google Drive</strong> — Link terryt.kato.8@gmail.com to
+                      sync HR documents, signed agreements, and templates.</>
+                    )}
+                  </div>
+                  {driveStatus === true && (
+                    <button
+                      className={styles.signActionBtn}
+                      onClick={disconnectDrive}
+                    >
+                      Disconnect
+                    </button>
+                  )}
+                  {driveStatus === false && (
+                    <a href="http://localhost:3001/auth/google">
+                      <Button variant="primary" size="sm">Connect Drive</Button>
+                    </a>
+                  )}
+                </div>
+              )}
 
               <EATrigger
                 label={`EA Agent: ${int.name} — ${int.status==='active'?'optimize integration':'complete setup'}`}

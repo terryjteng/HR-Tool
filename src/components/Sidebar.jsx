@@ -12,6 +12,7 @@ const NAV = [
     { id: 'compliance', icon: '✓', label: 'Compliance', badge: '10', badgeWarn: true },
     { id: 'hiring',     icon: '+', label: 'Hiring',     badge: '1' },
     { id: 'onboarding', icon: '→', label: 'Onboarding' },
+    { id: 'signing',    icon: '✍', label: 'Signing' },
   ]},
   { section: 'Integrations', items: [
     { id: 'integrations', icon: '⟳', label: 'Connections' },

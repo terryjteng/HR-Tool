@@ -697,3 +697,147 @@
   .hbSelector, .hbToc { display: none; }
   .hbDocument { border: none; box-shadow: none; }
 }
+
+/* ─── Signing page ────────────────────────────────────── */
+.signTabBar {
+  display: flex;
+  gap: 0;
+  border-bottom: 0.5px solid var(--border-light);
+  overflow-x: auto;
+}
+
+.signTab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: all 0.15s;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+}
+.signTab:hover { color: var(--text-primary); }
+.signTabActive { color: var(--text-primary); border-bottom-color: var(--k8-accent); font-weight: 500; }
+.signTabCount {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+.signDocRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  transition: background 0.12s;
+}
+.signDocRow:hover { background: var(--bg-secondary); }
+
+.signDocIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.signDocInfo { flex: 1; min-width: 0; }
+.signDocTitle { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+.signDocMeta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.signDocTags { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.signDocDate { font-size: 11px; color: var(--text-tertiary); }
+
+.signDocActions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+
+.signActionBtn {
+  font-size: 11px;
+  padding: 4px 11px;
+  border-radius: 12px;
+  border: 0.5px solid var(--border-medium);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.12s;
+}
+.signActionBtn:hover { border-color: var(--k8-accent); color: var(--k8-accent); background: var(--k8-accent-light); }
+.signDeleteBtn:hover { border-color: var(--k8-danger) !important; color: var(--k8-danger) !important; background: var(--k8-danger-light) !important; }
+
+.signTemplateGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.signTemplateCard {
+  background: var(--bg-secondary);
+  border: 0.5px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s;
+  width: 100%;
+}
+.signTemplateCard:hover { border-color: var(--k8-accent); background: var(--bg-primary); }
+.signTemplateActive { border-color: var(--k8-accent) !important; background: var(--k8-accent-light) !important; }
+.signTemplateIcon { font-size: 22px; margin-bottom: 6px; }
+.signTemplateLabel { font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+.signTemplateDesc { font-size: 11px; color: var(--text-secondary); line-height: 1.45; }
+
+.signSuccessBanner {
+  text-align: center;
+  padding: 20px 16px;
+  background: var(--k8-teal-light);
+  border-radius: var(--radius-md);
+  margin-bottom: 4px;
+}
+
+.signLinkRow { display: flex; gap: 6px; }
+.signLinkInput {
+  flex: 1;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+}
+.signCopyBtn {
+  font-size: 11px;
+  padding: 6px 14px;
+  border-radius: 12px;
+  border: none;
+  background: var(--k8-accent);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.signCopyBtn:hover { opacity: 0.85; }
+
+/* ─── Drive connect section ───────────────────────────── */
+.driveConnectBox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border: 0.5px solid var(--border-light);
+  border-radius: var(--radius-md);
+  margin-top: 16px;
+}
+.driveConnectInfo { flex: 1; font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+.driveConnectInfo strong { color: var(--text-primary); }
