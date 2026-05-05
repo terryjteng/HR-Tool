@@ -156,7 +156,7 @@ export default function OrgChart() {
       )}
       <PageHeader
         title="Org Chart"
-        subtitle="Kato.8 Studios · 5 departments · 4 project teams · 33 members"
+        subtitle="Kato.8 Studios · 6 departments · 4 project teams · 39 active members"
         actions={<Button variant="primary" size="sm">+ Add role</Button>}
       />
       <PageContent>

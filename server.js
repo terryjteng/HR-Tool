@@ -375,6 +375,52 @@ app.post('/api/ea', async (req, res) => {
 
 app.get('/api/ping', (_req, res) => res.json({ ok: true, service: 'kato8-hr-tool' }))
 
+// ─── Team manifest endpoint (consumed by Social Media Dashboard) ──────────────
+app.get('/api/team', (_req, res) => {
+  const TEAM = [
+    { id:'ceo',      name:'Terry Teng',        initials:'TT', dept:'executive',   role:'Founder & CEO',                team:'studio',           email:'terryt.kato.8@gmail.com',         timezone:'PST' },
+    { id:'exec-001', name:'Aaron Rodriguez',   initials:'AR', dept:'executive',   role:'Marketing & Creative Writer',  team:'studio',           email:'ajr.contact@gmail.com',           timezone:'PST' },
+    { id:'des-001',  name:'Ryan Kenfield',     initials:'RK', dept:'design',      role:'Lead Game Designer',           team:'last-light',       email:'ryankenfield@gmail.com',          timezone:'MST' },
+    { id:'des-002',  name:'Luis Castrejon',    initials:'LC', dept:'design',      role:'Game Designer',                team:'last-light',       email:'luis.c.castrejon@gmail.com',      timezone:'CST' },
+    { id:'des-003',  name:'Ashlee Walker',     initials:'AW', dept:'design',      role:'Design Intern',                team:'last-light',       email:'Akw4723@gmail.com',               timezone:'CST', intern:true },
+    { id:'des-004',  name:'Cori M',            initials:'CM', dept:'design',      role:'Design Intern',                team:'last-light',       intern:true },
+    { id:'des-005',  name:'Pride St. Clair',   initials:'PC', dept:'design',      role:'Lead Game Designer',           team:'corebound',        email:'pridethesaint@gmail.com',         timezone:'PST' },
+    { id:'des-006',  name:'Ryan Folk',         initials:'RF', dept:'design',      role:'Game & Level Designer',        team:'corebound',        email:'rhinoswim@gmail.com',             timezone:'CST' },
+    { id:'des-007',  name:'Lauren Palumbo',    initials:'LP', dept:'design',      role:'Game Designer & Writer',       team:'corebound',        email:'laurenpalumbo4@gmail.com',        timezone:'EST' },
+    { id:'des-008',  name:'Sophia J',          initials:'SJ', dept:'design',      role:'Lead Game Designer',           team:'big-boss-cleanup', email:'sophiaj1044@gmail.com',           timezone:'PST' },
+    { id:'eng-001',  name:'Carlos Trujillo',   initials:'CT', dept:'engineering', role:'Lead Engineer',                team:'last-light',       email:'trujillo.r.c.06@gmail.com',       timezone:'PST' },
+    { id:'eng-002',  name:'Rhianna Pinkerton', initials:'RH', dept:'engineering', role:'Lead Engineer',                team:'corebound',        email:'rhiannapinkerton@gmail.com',      timezone:'PST' },
+    { id:'eng-003',  name:'Daniel Fornell',    initials:'DF', dept:'engineering', role:'Unreal Developer',             team:'big-boss-cleanup', email:'dafornell@gmail.com',             timezone:'EST' },
+    { id:'eng-004',  name:'Michael A',         initials:'MA', dept:'engineering', role:'Eng / Dev',                   team:'big-boss-cleanup' },
+    { id:'art-001',  name:'Bryan N',           initials:'BN', dept:'art',         role:'Lead Artist',                  team:'last-light',       email:'artillory@gmail.com',             timezone:'PST' },
+    { id:'art-002',  name:'Mia Colebrooke',    initials:'MC', dept:'art',         role:'Animator',                     team:'last-light',       email:'mvcolebrooke@gmail.com',          timezone:'CST' },
+    { id:'art-003',  name:'Keolani Baumgart',  initials:'KB', dept:'art',         role:'2D/Pixel Artist',              team:'last-light',       email:'keolanibaumgart@gmail.com',       timezone:'CST' },
+    { id:'art-004',  name:'Pedro Silva',       initials:'PS', dept:'art',         role:'Art Intern',                   team:'last-light',       email:'pedroslim2@gmail.com',            timezone:'CET', intern:true },
+    { id:'art-012',  name:'AJ Heyen',          initials:'AJ', dept:'art',         role:'3D Artist',                    team:'last-light',       email:'aj@heyenarts.com',                timezone:'CST' },
+    { id:'art-005',  name:'Hailey Hebden',     initials:'HH', dept:'art',         role:'Lead Artist',                  team:'corebound',        email:'haileyhebden@gmail.com',          timezone:'EST' },
+    { id:'art-006',  name:'Elizabeth Polilli', initials:'EP', dept:'art',         role:'Animator',                     team:'corebound',        email:'erpolilli2002@gmail.com',         timezone:'EST' },
+    { id:'art-007',  name:'Raynia P',          initials:'RP', dept:'art',         role:'2D Artist',                    team:'corebound',        email:'raydiant.illustrations@gmail.com' },
+    { id:'art-008',  name:'Juno Tran-Cao',     initials:'JT', dept:'art',         role:'Animator',                     team:'corebound',        email:'trancaojuno@gmail.com',           timezone:'EST' },
+    { id:'art-013',  name:'Mario Medrano',     initials:'MM', dept:'art',         role:'2D Artist & Animator',         team:'corebound',        email:'artist.mariojdmedrano@gmail.com', timezone:'CST' },
+    { id:'art-010',  name:'Luna Choe',         initials:'LC', dept:'art',         role:'3D Artist',                    team:'big-boss-cleanup', email:'Choesenfilms@gmail.com',          timezone:'EST' },
+    { id:'art-011',  name:'Jacob Holton',      initials:'JH', dept:'art',         role:'3D Artist',                    team:'big-boss-cleanup', email:'jacob.holton@gmail.com',          timezone:'PST' },
+    { id:'art-014',  name:'Jacob Chavez',      initials:'JC', dept:'art',         role:'3D Artist',                    team:'big-boss-cleanup', email:'jcb.ccz@gmail.com',               timezone:'CST' },
+    { id:'art-015',  name:'Thane Wisherop',    initials:'TW', dept:'art',         role:'3D Artist',                    team:'big-boss-cleanup', email:'thanefunkey@gmail.com',           timezone:'PST' },
+    { id:'art-016',  name:'Ritvik Bhadury',    initials:'RB', dept:'art',         role:'3D Artist',                    team:'big-boss-cleanup', email:'ritvikbhadury402@gmail.com',      timezone:'EST' },
+    { id:'ux-001',   name:'Tessa Lee',         initials:'TL', dept:'uiux',        role:'UI/UX Lead Intern',            team:'studio',           email:'tgtlee@gmail.com',                timezone:'EST', intern:true },
+    { id:'ux-002',   name:'Adam Manning',      initials:'AM', dept:'uiux',        role:'UI/UX Eng Intern',             team:'studio',           email:'adam@thomasavl.com',              timezone:'PST', intern:true },
+    { id:'ux-003',   name:'Katie L',           initials:'KL', dept:'uiux',        role:'UI/UX & Social Media Intern',  team:'studio',           intern:true },
+    { id:'ux-004',   name:'Kit Hannay',        initials:'KH', dept:'uiux',        role:'UI Artist & 2D Animator',      team:'studio',           email:'crowyoteayt@gmail.com',           timezone:'EST' },
+    { id:'aud-001',  name:'Schwa Alvarez',     initials:'SA', dept:'audio',       role:'Sound Designer',               team:'studio',           email:'jschwaalvarez@gmail.com',         timezone:'PST' },
+    { id:'aud-002',  name:'Ayako Yamauchi',    initials:'AY', dept:'audio',       role:'Sound Designer',               team:'studio',           email:'ayamauchistudio@gmail.com',       timezone:'PST' },
+    { id:'aud-003',  name:'Sandy C',           initials:'SC', dept:'audio',       role:'Music',                        team:'studio' },
+    { id:'aud-004',  name:'Michael TB',        initials:'MT', dept:'audio',       role:'Voice',                        team:'studio' },
+    { id:'aud-005',  name:'Janey',             initials:'JN', dept:'audio',       role:'Voice',                        team:'studio' },
+    { id:'aud-006',  name:'Emmanuel',          initials:'EM', dept:'audio',       role:'2nd Voice',                    team:'studio' },
+  ]
+  res.json({ studio:'Kato.8 Studios', memberCount: TEAM.length, members: TEAM })
+})
+
 app.get('/api/actions', (req, res) => {
   let actions = loadActions()
   const { areaTag, priority, status, owner } = req.query
