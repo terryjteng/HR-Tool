@@ -284,6 +284,51 @@ INSTRUCTIONS:
 - After making tool-based changes, summarize what was created/updated.
 - Format with markdown: headers (##), bold (**text**), bullet lists.`
 
+// ─── Legal Agent proxy ───────────────────────────────────────────────────────
+
+app.post('/api/legal-review', async (req, res) => {
+  const { prompt, type, document: doc } = req.body
+  if (!prompt) return res.status(400).json({ error: 'prompt required' })
+
+  const systemPrompt = `You are a legal AI assistant specializing in California employment and entertainment law, working exclusively for Kato.8 Studios — an independent game development studio based in Mission Hills, CA.
+
+Studio context:
+- 39 collaborators on revenue-share agreements (contractor structure, not W-2 employees)
+- All classified under CA AB 5 creative professional exemptions
+- Projects: Last Light, Corebound, Big Boss Cleanup
+- Active agreement types: Revenue Share Agreements, IP Assignment Agreements, NDAs, Offer Letters
+- Founder: Terry Teng (terryt@kato8studios.com)
+- Primary legal concerns: IP ownership of all creative work, AB 5 contractor classification, NDA enforceability, revenue share payout triggers, offboarding clauses
+
+When reviewing documents or operations:
+1. Identify legal risks and missing clauses specific to CA law
+2. Flag AB 5 compliance issues (contractor vs employee classification)
+3. Review IP assignment language — ensure all creative work is assigned to Kato.8 Studios
+4. Check revenue share language for clarity on triggers, definitions, and dispute resolution
+5. Flag NDA survival clauses, scope, and enforceability issues
+6. Note any CA-specific requirements (SB 553, SB 1162, CCPA, IIPP)
+7. Provide specific, actionable recommendations — not generic legal advice
+
+Format your response with clear sections using **bold headings**, bullet points for findings, and a final **Recommendations** section.
+
+IMPORTANT: Always include this disclaimer at the end: "⚠️ This is AI-assisted legal analysis for internal review. Consult a licensed California employment attorney before taking binding legal action."
+
+${doc ? `Document type: ${type || 'General'}\n\nDocument content:\n${doc}` : `Review type: ${type || 'General'}`}`
+
+  try {
+    const response = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2000,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: prompt }],
+    })
+    const text = response.content.find(b => b.type === 'text')?.text || ''
+    res.json({ result: text, type, model: response.model })
+  } catch (e) {
+    res.status(500).json({ error: e.message })
+  }
+})
+
 // ─── EA Agent endpoint (streaming + agentic tool loop) ─────────────────────���──
 
 app.post('/api/ea', async (req, res) => {
