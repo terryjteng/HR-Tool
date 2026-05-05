@@ -2,12 +2,13 @@ import express from 'express'
 import Anthropic from '@anthropic-ai/sdk'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
 import { randomUUID } from 'crypto'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
 app.use(express.json())
+app.use(express.urlencoded({ extended: false }))
 
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*')
@@ -559,9 +560,9 @@ function docContent(templateId, r, iso) {
 
 function signingPageHTML(doc) {
   const content = docContent(doc.templateId, doc.recipient, doc.createdAt)
-  const isSigned  = doc.status === 'signed'
+  const isSigned   = doc.status === 'signed'
   const isDeclined = doc.status === 'declined'
-  const isActive   = doc.status === 'sent' || doc.status === 'draft'
+  const isActive   = !isSigned && !isDeclined
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -628,7 +629,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <div class="top-bar">
   <div class="top-logo">K8</div>
   <div class="top-title">${doc.title} · Kato.8 Studios Document Signing</div>
-  <span class="top-status status-${doc.status}">${doc.status.toUpperCase()}</span>
+  <span class="top-status status-${doc.status==='pending'?'sent':doc.status}">${doc.status==='pending'?'PENDING':doc.status.toUpperCase()}</span>
 </div>
 ${isSigned  ? `<div class="banner banner-signed">✓ Signed by ${doc.signerName || doc.recipient.name} on ${fmtDate(doc.signedAt)}</div>` : ''}
 ${isDeclined ? `<div class="banner banner-declined">✗ This document was declined on ${fmtDate(doc.declinedAt)}</div>` : ''}
@@ -723,24 +724,45 @@ async function declineDoc() {
 
 app.get('/api/signing', (_req, res) => res.json(loadSigning()))
 
+const DOC_TITLES = {
+  'revenue-share': 'Revenue Share Agreement',
+  'ip-assignment': 'IP Assignment Agreement',
+  'nda': 'Non-Disclosure Agreement',
+  'offer-letter': 'Offer Letter',
+}
+
 app.post('/api/signing', (req, res) => {
   const docs = loadSigning()
   const now = new Date().toISOString()
+  const b = req.body
+  const templateId = b.templateId || b.template || 'revenue-share'
+  const recipient = (b.recipient && typeof b.recipient === 'object') ? b.recipient : {
+    name: b.recipientName || '',
+    email: b.recipientEmail || '',
+    role: b.role || '',
+    dept: b.dept || '',
+    team: b.team || '',
+    lead: b.lead || '',
+    startDate: b.startDate || '',
+    revenueSharePct: b.revenueSharePct || '',
+  }
   const doc = {
     id: randomUUID(),
     token: makeToken(),
-    templateId: req.body.templateId || 'revenue-share',
-    title: req.body.title || 'Document',
-    recipient: req.body.recipient || {},
-    status: 'sent',
+    templateId,
+    template: templateId,
+    title: b.title || DOC_TITLES[templateId] || 'Document',
+    recipient,
+    recipientName: recipient.name,
+    recipientEmail: recipient.email,
+    role: recipient.role,
+    status: 'pending',
     createdAt: now,
-    sentAt: now,
     signedAt: null,
     declinedAt: null,
     signature: null,
     signerName: null,
   }
-  doc.signingUrl = `http://localhost:3001/sign/${doc.token}`
   docs.unshift(doc)
   saveSigning(docs)
   res.json(doc)
@@ -814,6 +836,273 @@ app.get('/sign/:token', (req, res) => {
   res.setHeader('Content-Type', 'text/html')
   res.send(signingPageHTML(doc))
 })
+
+// ─── Onboarding Portal ────────────────────────────────────────────────────────
+
+const ONBOARD_FILE = join(__dirname, 'onboarding.json')
+function loadOnboarding() {
+  if (!existsSync(ONBOARD_FILE)) return []
+  try { return JSON.parse(readFileSync(ONBOARD_FILE, 'utf8')) } catch { return [] }
+}
+function saveOnboarding(s) { writeFileSync(ONBOARD_FILE, JSON.stringify(s, null, 2)) }
+
+const ONBOARD_DOC_TITLES = {
+  'revenue-share': 'Revenue Share Agreement',
+  'ip-assignment': 'IP Assignment Agreement',
+  'nda': 'Non-Disclosure Agreement',
+}
+const ONBOARD_DOC_ICONS = {
+  'revenue-share': '💰', 'ip-assignment': '⚖️', 'nda': '🔒',
+}
+
+// POST /api/onboard — create session + auto-generate 3 signing docs
+app.post('/api/onboard', (req, res) => {
+  const { name, role, email, dept, team, lead, startDate, revenueSharePct } = req.body
+  if (!name || !role) return res.status(400).json({ error: 'name and role required' })
+  const signing = loadSigning()
+  const docs = []
+  for (const template of ['revenue-share', 'ip-assignment', 'nda']) {
+    const recipient = { name, email: email || '', role, dept: dept || 'art', team: team || 'studio', lead: lead || '', startDate: startDate || '', revenueSharePct: revenueSharePct || '' }
+    const doc = {
+      id: randomUUID(), token: makeToken(), templateId: template, template,
+      title: ONBOARD_DOC_TITLES[template], recipient,
+      recipientName: name, recipientEmail: email || '', role,
+      status: 'pending', createdAt: new Date().toISOString(),
+      signedAt: null, declinedAt: null, signature: null, signerName: null,
+    }
+    signing.push(doc)
+    docs.push({ id: doc.id, token: doc.token, template, title: doc.title })
+  }
+  saveSigning(signing)
+  const session = {
+    id: randomUUID(), token: makeToken(), name, role,
+    email: email || '', dept: dept || 'art', team: team || 'studio',
+    lead: lead || '', startDate: startDate || '', revenueSharePct: revenueSharePct || '',
+    docs, discordUsername: null, welcomeRead: false, calendarAdded: false,
+    status: 'pending', createdAt: new Date().toISOString(),
+  }
+  const sessions = loadOnboarding()
+  sessions.push(session)
+  saveOnboarding(sessions)
+  res.json(session)
+})
+
+app.get('/api/onboard', (_req, res) => res.json(loadOnboarding()))
+app.get('/api/onboard/:id', (req, res) => {
+  const s = loadOnboarding().find(s => s.id === req.params.id)
+  if (!s) return res.status(404).json({ error: 'not found' })
+  res.json(s)
+})
+app.patch('/api/onboard/:id', (req, res) => {
+  const sessions = loadOnboarding()
+  const idx = sessions.findIndex(s => s.id === req.params.id)
+  if (idx === -1) return res.status(404).json({ error: 'not found' })
+  sessions[idx] = { ...sessions[idx], ...req.body }
+  saveOnboarding(sessions)
+  res.json(sessions[idx])
+})
+
+// Discord username submission (HTML form POST — uses urlencoded body)
+app.post('/onboard/:token/discord', (req, res) => {
+  const sessions = loadOnboarding()
+  const idx = sessions.findIndex(s => s.token === req.params.token)
+  if (idx === -1) return res.status(404).send('Not found')
+  sessions[idx].discordUsername = (req.body.username || '').trim()
+  saveOnboarding(sessions)
+  res.redirect(`/onboard/${req.params.token}`)
+})
+
+// Mark a step complete (JSON POST from portal JS)
+app.post('/onboard/:token/complete', (req, res) => {
+  const sessions = loadOnboarding()
+  const idx = sessions.findIndex(s => s.token === req.params.token)
+  if (idx === -1) return res.status(404).json({ error: 'not found' })
+  const { step } = req.body
+  if (step === 'welcomeRead') sessions[idx].welcomeRead = true
+  if (step === 'calendarAdded') sessions[idx].calendarAdded = true
+  saveOnboarding(sessions)
+  res.json({ ok: true })
+})
+
+// Public onboarding portal
+app.get('/onboard/:token', (req, res) => {
+  const sessions = loadOnboarding()
+  const session = sessions.find(s => s.token === req.params.token)
+  if (!session) return res.status(404).send(`<!DOCTYPE html><html><body style="font-family:sans-serif;padding:40px;text-align:center"><h2>Invalid onboarding link</h2><p>This link is invalid or has expired. Contact terryt@kato8studios.com.</p></body></html>`)
+  const signing = loadSigning()
+  const docsWithStatus = session.docs.map(d => {
+    const sd = signing.find(sd => sd.id === d.id)
+    return { ...d, status: sd?.status || 'pending' }
+  })
+  const allDocsSigned = docsWithStatus.every(d => d.status === 'signed')
+  const steps = [
+    { done: allDocsSigned },
+    { done: !!session.discordUsername },
+    { done: session.welcomeRead },
+    { done: session.calendarAdded },
+  ]
+  const progress = Math.round(steps.filter(s => s.done).length / steps.length * 100)
+  res.setHeader('Content-Type', 'text/html')
+  res.send(onboardingPortalHTML(session, docsWithStatus, allDocsSigned, progress))
+})
+
+function onboardingPortalHTML(session, docs, allDocsSigned, progress) {
+  const teamLabel = { studio:'General Studio', 'last-light':'Last Light', corebound:'Corebound', 'big-boss-cleanup':'Big Boss Cleanup' }[session.team] || session.team
+  const startStr = session.startDate ? fmtDate(session.startDate + 'T00:00:00') : ''
+  const ds = s => s === 'signed' ? 'ds-signed' : s === 'declined' ? 'ds-declined' : 'ds-pending'
+  const dsLabel = s => s === 'signed' ? '✓ Signed' : s === 'declined' ? '✗ Declined' : 'Tap to sign →'
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Onboarding Portal — ${session.name} · Kato.8 Studios</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F4F3F0;color:#1a1a2e;min-height:100vh}
+.top-bar{background:#1a1a2e;color:#fff;padding:14px 24px;display:flex;align-items:center;gap:14px}.top-logo{width:36px;height:36px;border-radius:10px;background:#7C3AED;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.wrapper{max-width:640px;margin:0 auto;padding:24px 16px 80px}
+.welcome{background:#fff;border-radius:12px;border:1px solid #E5E3DF;padding:28px 28px 24px;margin-bottom:16px;text-align:center}
+.welcome-icon{font-size:40px;margin-bottom:12px}.welcome-title{font-size:20px;font-weight:700;margin-bottom:6px}
+.welcome-sub{font-size:13px;color:#666;line-height:1.6}
+.prog-wrap{margin-top:16px;height:8px;background:#E5E3DF;border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;background:#7C3AED;border-radius:4px}
+.prog-label{font-size:11px;color:#888;margin-top:6px}
+.step{background:#fff;border-radius:12px;border:1px solid #E5E3DF;margin-bottom:12px;overflow:hidden}
+.step.done{border-color:#5DCAA5}
+.step-hdr{display:flex;align-items:center;gap:12px;padding:16px 20px}
+.step-num{width:30px;height:30px;border-radius:50%;background:#E5E3DF;color:#666;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step.done .step-num{background:#5DCAA5;color:#fff}
+.step-title{font-size:14px;font-weight:600;flex:1}
+.badge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:600}
+.b-done{background:#E1F5EE;color:#0F6E56}.b-pend{background:#FAEEDA;color:#854F0B}
+.step-body{padding:0 20px 20px}
+.doc-link{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #E5E3DF;border-radius:8px;margin-bottom:8px;text-decoration:none;color:#1a1a2e;font-size:13px;transition:border 0.15s}
+.doc-link:hover{border-color:#7C3AED}
+.ds-label{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;margin-left:auto;white-space:nowrap}
+.ds-pending{background:#FAEEDA;color:#854F0B}.ds-signed{background:#E1F5EE;color:#0F6E56}.ds-declined{background:#FEE2E2;color:#991B1B}
+.discord-form{display:flex;gap:8px;margin-top:10px}
+.discord-form input{flex:1;padding:10px 12px;border:1.5px solid #D1CEC9;border-radius:8px;font-size:13px;font-family:inherit}
+.discord-form input:focus{outline:none;border-color:#7C3AED}
+.btn{padding:9px 20px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:all 0.15s}
+.btn-p{background:#7C3AED;color:#fff}.btn-p:hover{opacity:0.88}.btn-p:disabled{opacity:0.5;cursor:default}
+.btn-t{background:#0F6E56;color:#fff}.btn-t:hover{opacity:0.88}
+.hint{font-size:12px;color:#888;line-height:1.5}
+.success{font-size:13px;color:#0F6E56;font-weight:500;margin-top:6px}
+.meeting-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #F0EDE9;font-size:13px}
+.meeting-row:last-child{border-bottom:none}
+.mtg-name{flex:1;font-weight:500}.mtg-time{font-size:12px;color:#888}
+.welcome-text{font-size:13px;color:#444;line-height:1.8}
+.refresh{display:block;width:100%;padding:9px;background:#F9F8F6;border:1px solid #E5E3DF;border-radius:8px;font-size:12px;color:#888;text-align:center;cursor:pointer;margin-top:8px;font-family:inherit}
+.refresh:hover{background:#E5E3DF}
+.footer{text-align:center;padding:24px;font-size:11px;color:#aaa}
+</style></head><body>
+<div class="top-bar">
+  <div class="top-logo">K8</div>
+  <div style="font-size:14px;font-weight:500">Kato.8 Studios — Your Onboarding Portal</div>
+</div>
+<div class="wrapper">
+  <div class="welcome">
+    <div class="welcome-icon">🎉</div>
+    <div class="welcome-title">Welcome, ${session.name}!</div>
+    <div class="welcome-sub">
+      You're joining as <strong>${session.role}</strong>${teamLabel ? ` on the <strong>${teamLabel}</strong> team` : ''}.
+      ${startStr ? `<br>Start date: <strong>${startStr}</strong>` : ''}
+    </div>
+    <div class="prog-wrap"><div class="prog-fill" style="width:${progress}%"></div></div>
+    <div class="prog-label">${steps ? steps.filter(s=>s.done).length : 0} of 4 steps complete · ${progress}%</div>
+  </div>
+
+  <!-- Step 1: Agreements -->
+  <div class="step${allDocsSigned?' done':''}">
+    <div class="step-hdr">
+      <div class="step-num">${allDocsSigned?'✓':'1'}</div>
+      <div class="step-title">Sign Your Agreements</div>
+      <span class="badge ${allDocsSigned?'b-done':'b-pend'}">${allDocsSigned?'Complete':'Action needed'}</span>
+    </div>
+    <div class="step-body">
+      <p class="hint" style="margin-bottom:10px">Please sign all 3 documents before your start date. Each opens in a new tab.</p>
+      ${docs.map(d => `<a href="/sign/${d.token}" class="doc-link" target="_blank">
+        <span>${ONBOARD_DOC_ICONS[d.template]||'📄'}</span>
+        <span>${d.title}</span>
+        <span class="ds-label ${ds(d.status)}">${dsLabel(d.status)}</span>
+      </a>`).join('')}
+      <button class="refresh" onclick="location.reload()">↻ Refresh status after signing</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Discord -->
+  <div class="step${session.discordUsername?' done':''}">
+    <div class="step-hdr">
+      <div class="step-num">${session.discordUsername?'✓':'2'}</div>
+      <div class="step-title">Join Our Discord Server</div>
+      <span class="badge ${session.discordUsername?'b-done':'b-pend'}">${session.discordUsername?'Complete':'Pending'}</span>
+    </div>
+    <div class="step-body">
+      ${session.discordUsername
+        ? `<p class="success">✓ Discord username on file: <strong>${session.discordUsername}</strong></p>
+           <p class="hint" style="margin-top:6px">Our team will add you to the Kato.8 Studios server and assign your department role. Check your Discord requests.</p>`
+        : `<p class="hint" style="margin-bottom:0">Submit your Discord username and we'll add you to the studio server and assign your role.</p>
+           <form class="discord-form" action="/onboard/${session.token}/discord" method="POST">
+             <input name="username" placeholder="Your Discord username" required />
+             <button type="submit" class="btn btn-p">Submit</button>
+           </form>`
+      }
+    </div>
+  </div>
+
+  <!-- Step 3: Welcome material -->
+  <div class="step${session.welcomeRead?' done':''}">
+    <div class="step-hdr">
+      <div class="step-num">${session.welcomeRead?'✓':'3'}</div>
+      <div class="step-title">Read Welcome Material</div>
+      <span class="badge ${session.welcomeRead?'b-done':'b-pend'}">${session.welcomeRead?'Complete':'Pending'}</span>
+    </div>
+    <div class="step-body">
+      <div class="welcome-text">
+        <p><strong>Welcome to Kato.8 Studios!</strong></p>
+        <p style="margin-top:10px">We're a remote-first creative studio building original games. Here's what you need to know:</p>
+        <p style="margin-top:10px"><strong>Communication:</strong> Discord is our primary tool. Please keep notifications on during core hours and respond to DMs within 24 hours.</p>
+        <p style="margin-top:10px"><strong>Standards:</strong> Quality over speed. If you're unsure about something, ask. Creative feedback is collaborative — we're building together.</p>
+        <p style="margin-top:10px"><strong>IP &amp; Confidentiality:</strong> All work you create for Kato.8 is owned by the studio. Do not share unreleased project details publicly on social or otherwise.</p>
+        <p style="margin-top:10px"><strong>Revenue share:</strong> Payouts happen within 60 days of revenue events. Your percentage is in your Revenue Share Agreement.</p>
+        <p style="margin-top:10px">Questions? Contact Terry Teng: <a href="mailto:terryt@kato8studios.com">terryt@kato8studios.com</a></p>
+      </div>
+      ${!session.welcomeRead
+        ? `<button class="btn btn-t" style="margin-top:16px" onclick="completeStep('welcomeRead',this)">✓ I've read the welcome material</button>`
+        : `<p class="success" style="margin-top:10px">✓ Completed</p>`}
+    </div>
+  </div>
+
+  <!-- Step 4: Calendar -->
+  <div class="step${session.calendarAdded?' done':''}">
+    <div class="step-hdr">
+      <div class="step-num">${session.calendarAdded?'✓':'4'}</div>
+      <div class="step-title">Get Added to Team Meetings</div>
+      <span class="badge ${session.calendarAdded?'b-done':'b-pend'}">${session.calendarAdded?'Complete':'Pending'}</span>
+    </div>
+    <div class="step-body">
+      <p class="hint" style="margin-bottom:12px">Your lead will add you to these recurring meetings. Let them know your timezone.</p>
+      <div class="meeting-row"><span class="mtg-name">All-Studio Weekly Sync</span><span class="mtg-time">Mondays · 6:00 PM PT</span></div>
+      <div class="meeting-row"><span class="mtg-name">Department Check-in</span><span class="mtg-time">Wednesdays · 5:00 PM PT</span></div>
+      <div class="meeting-row"><span class="mtg-name">1:1 with Lead</span><span class="mtg-time">Bi-weekly · time TBD with lead</span></div>
+      <div style="margin-top:14px">
+        ${!session.calendarAdded
+          ? `<button class="btn btn-t" onclick="completeStep('calendarAdded',this)">✓ I've been added to the meetings</button>`
+          : `<p class="success">✓ Confirmed</p>`}
+      </div>
+    </div>
+  </div>
+</div>
+<div class="footer">Kato.8 Studios · terryt@kato8studios.com · Mission Hills, California</div>
+<script>
+async function completeStep(step, btn) {
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try {
+    const r = await fetch('/onboard/${session.token}/complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step})});
+    if(r.ok) location.reload();
+    else if(btn){btn.disabled=false;btn.textContent='Error — try again';}
+  } catch(e){if(btn){btn.disabled=false;btn.textContent='Error — try again';}}
+}
+</script>
+</body></html>`
+}
 
 // ─── Google Drive Integration ─────────────────────────────────────────────────
 // Setup: add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env
@@ -910,7 +1199,7 @@ app.get('/api/drive/files', async (req, res) => {
 // Disconnect Drive
 app.post('/api/drive/disconnect', (req, res) => {
   if (existsSync(TOKENS_FILE)) {
-    try { require('fs').unlinkSync(TOKENS_FILE) } catch {}
+    try { unlinkSync(TOKENS_FILE) } catch (_) {}
   }
   res.json({ ok: true })
 })

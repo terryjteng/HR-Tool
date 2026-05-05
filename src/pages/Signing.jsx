@@ -347,7 +347,7 @@ export default function Signing() {
         ) : (
           <Card style={{ padding: 0 }}>
             {filtered.map((doc, i) => {
-              const tpl = TEMPLATES.find(t => t.id === doc.template)
+              const tpl = TEMPLATES.find(t => t.id === (doc.template || doc.templateId))
               const dateStr = doc.createdAt
                 ? new Date(doc.createdAt).toLocaleDateString('en-US', {
                     month: 'short', day: 'numeric', year: 'numeric',

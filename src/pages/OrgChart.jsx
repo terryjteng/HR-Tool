@@ -1,7 +1,7 @@
-// ─── OrgChart.jsx ─────────────────────────────────────────────────────────────
 import { useState } from 'react'
 import { ORG, TEAM, TEAMS } from '../data/studioData.js'
-import { PageHeader, PageContent, Card, CardHeader, Avatar, Tag, Button } from '../components/UI.jsx'
+import { PageHeader, PageContent, Card, Avatar, Tag, Button } from '../components/UI.jsx'
+import ProfileModal from '../components/ProfileModal.jsx'
 import styles from './Pages.module.css'
 
 const COLOR_MAP = {
@@ -17,7 +17,7 @@ const DEPT_LABELS = { executive:'Executive', design:'Design', engineering:'Engin
 const TEAM_COLORS_CSS = { studio:'var(--k8-accent)', 'last-light':'var(--k8-teal)', corebound:'var(--k8-blue)', 'big-boss-cleanup':'var(--k8-amber)' }
 const AVATAR_COLORS = ['purple','teal','amber','coral','blue','purple','teal','amber']
 
-function OrgNode({ node }) {
+function OrgNode({ node, onPersonClick }) {
   const c = COLOR_MAP[node.color] || COLOR_MAP.vacant
   if (node.isGroup) {
     return (
@@ -32,7 +32,9 @@ function OrgNode({ node }) {
               {node.children.length > 1 && (
                 <div style={{ position:'absolute', top:0, height:1, background:'var(--border-medium)', left:`calc(${100/node.children.length/2}% + 6px)`, right:`calc(${100/node.children.length/2}% + 6px)` }} />
               )}
-              {node.children.map(child => <OrgNode key={child.id} node={child} />)}
+              {node.children.map(child => (
+                <OrgNode key={child.id} node={child} onPersonClick={onPersonClick} />
+              ))}
             </div>
           </>
         )}
@@ -43,8 +45,10 @@ function OrgNode({ node }) {
     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'0 5px' }}>
       <div
         style={{ padding:'7px 11px', borderRadius:8, border:`0.5px ${c.dashed?'dashed':'solid'} ${c.border}`, background:c.bg, cursor:'pointer', textAlign:'center', minWidth:88, maxWidth:130, transition:'all 0.15s' }}
-        onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.08)' }}
+        onClick={() => !node.vacant && onPersonClick && onPersonClick(node)}
+        onMouseEnter={e => { e.currentTarget.style.transform='translateY(-2px)'; e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.1)' }}
         onMouseLeave={e => { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='' }}
+        title={node.vacant ? '' : `Click to view ${node.name}'s profile`}
       >
         <div style={{ fontSize:11, fontWeight:600, color:c.name, whiteSpace:'nowrap' }}>{node.name}</div>
         <div style={{ fontSize:9, color:c.role, marginTop:2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:118 }}>{node.role}</div>
@@ -58,7 +62,9 @@ function OrgNode({ node }) {
             {node.children.length > 1 && (
               <div style={{ position:'absolute', top:0, height:1, background:'var(--border-medium)', left:`calc(${100/node.children.length/2}% + 5px)`, right:`calc(${100/node.children.length/2}% + 5px)` }} />
             )}
-            {node.children.map(child => <OrgNode key={child.id} node={child} />)}
+            {node.children.map(child => (
+              <OrgNode key={child.id} node={child} onPersonClick={onPersonClick} />
+            ))}
           </div>
         </>
       )}
@@ -66,7 +72,7 @@ function OrgNode({ node }) {
   )
 }
 
-function TeamView() {
+function TeamView({ onPersonClick }) {
   return (
     <div className={styles.teamGridView}>
       {TEAMS.map((t, ti) => {
@@ -88,7 +94,12 @@ function TeamView() {
                 <div className={styles.teamLeadLabel}>Leads</div>
                 <div className={styles.teamLeadRow}>
                   {leads.map((m, i) => (
-                    <div key={m.id} className={styles.teamMemberPill} style={{ borderColor: TEAM_COLORS_CSS[t.id] }}>
+                    <div
+                      key={m.id}
+                      className={styles.teamMemberPill}
+                      style={{ borderColor: TEAM_COLORS_CSS[t.id], cursor:'pointer' }}
+                      onClick={() => onPersonClick(m)}
+                    >
                       <Avatar initials={m.initials} color={AVATAR_COLORS[(ti * 4 + i) % AVATAR_COLORS.length]} size="sm" />
                       <div>
                         <div className={styles.teamMemberName}>{m.name}</div>
@@ -102,7 +113,12 @@ function TeamView() {
             {rest.length > 0 && (
               <div className={styles.teamRestRow}>
                 {rest.map((m, i) => (
-                  <div key={m.id} className={styles.teamChip}>
+                  <div
+                    key={m.id}
+                    className={styles.teamChip}
+                    style={{ cursor:'pointer' }}
+                    onClick={() => onPersonClick(m)}
+                  >
                     <Avatar initials={m.initials} color={AVATAR_COLORS[(ti * 4 + i) % AVATAR_COLORS.length]} size="xs" />
                     <span className={styles.teamChipName}>{m.name}</span>
                     {m.type === 'intern' && <span className={styles.teamInternDot} />}
@@ -119,8 +135,25 @@ function TeamView() {
 
 export default function OrgChart() {
   const [view, setView] = useState('dept')
+  const [profileMember, setProfileMember] = useState(null)
+
+  const openProfile = node => {
+    if (!node || node.vacant) return
+    const member = TEAM.find(m => m.id === node.id) || node
+    const idx = TEAM.findIndex(m => m.id === member.id)
+    setProfileMember({ member, avatarIdx: idx >= 0 ? idx : 0 })
+  }
+
   return (
     <>
+      {profileMember && (
+        <ProfileModal
+          member={profileMember.member}
+          avatarIdx={profileMember.avatarIdx}
+          onClose={() => setProfileMember(null)}
+          onSave={() => setProfileMember(null)}
+        />
+      )}
       <PageHeader
         title="Org Chart"
         subtitle="Kato.8 Studios · 5 departments · 4 project teams · 33 members"
@@ -138,25 +171,26 @@ export default function OrgChart() {
 
           {view === 'dept' && (
             <>
-              <div style={{ overflowX:'auto' }}>
-                <div style={{ minWidth:1100, padding:'12px 0 24px', display:'flex', flexDirection:'column', alignItems:'center' }}>
-                  <OrgNode node={ORG} />
+              <div style={{ overflowX:'auto', overflowY:'visible', margin:'0 -20px', padding:'0 20px' }}>
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', padding:'12px 80px 28px', width:'max-content', minWidth:'100%' }}>
+                  <OrgNode node={ORG} onPersonClick={openProfile} />
                 </div>
               </div>
-              <div style={{ display:'flex', gap:14, flexWrap:'wrap', paddingTop:14, borderTop:'0.5px solid var(--border-light)', fontSize:12, color:'var(--text-secondary)' }}>
-                {Object.entries(COLOR_MAP).map(([k,v]) => (
+              <div style={{ display:'flex', gap:14, flexWrap:'wrap', paddingTop:14, borderTop:'0.5px solid var(--border-light)', fontSize:12, color:'var(--text-secondary)', marginTop:8 }}>
+                {Object.entries(COLOR_MAP).map(([k, v]) => (
                   <div key={k} style={{ display:'flex', alignItems:'center', gap:5 }}>
                     <div style={{ width:10, height:10, borderRadius:'50%', background:v.border }} />
                     {DEPT_LABELS[k]}
                   </div>
                 ))}
+                <span style={{ marginLeft:'auto', fontSize:11 }}>Click any person to view / edit profile</span>
               </div>
             </>
           )}
 
           {view === 'team' && (
             <>
-              <TeamView />
+              <TeamView onPersonClick={openProfile} />
               <div style={{ display:'flex', gap:14, flexWrap:'wrap', paddingTop:14, borderTop:'0.5px solid var(--border-light)', fontSize:12, color:'var(--text-secondary)' }}>
                 {TEAMS.map(t => (
                   <div key={t.id} style={{ display:'flex', alignItems:'center', gap:5 }}>
@@ -164,7 +198,7 @@ export default function OrgChart() {
                     {t.label}
                   </div>
                 ))}
-                <span style={{ marginLeft:'auto', fontSize:11 }}>· = intern</span>
+                <span style={{ marginLeft:'auto', fontSize:11 }}>· = intern · Click any member to view / edit profile</span>
               </div>
             </>
           )}
