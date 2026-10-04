@@ -1327,5 +1327,5 @@ if (!process.env.VERCEL) {
     app.get('*', (_req, res) => res.sendFile(join(distPath, 'index.html')))
   }
   const PORT = process.env.PORT || 3001
-  app.listen(PORT, () => console.log(`HR API running on http://localhost:${PORT} (${store.usingSupabase ? 'Supabase' : 'local JSON files'})`))
+  app.listen(PORT, () => console.log(`HR API running on http://localhost:${PORT} (storage: ${store.backend})`))
 }

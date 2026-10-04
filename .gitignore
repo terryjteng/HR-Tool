@@ -3,9 +3,9 @@ dist/
 .env
 *.local
 
-# local-dev data (production uses Supabase)
+# local-dev data (production uses Vercel Blob)
 actions.json
 signing.json
 onboarding.json
-google_tokens.json
+settings.json
 .vercel
