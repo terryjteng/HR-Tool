@@ -520,6 +520,24 @@ app.post('/api/actions/batch', h(async (req, res) => {
   res.json(await store.insertNew('actions', incoming))
 }))
 
+// Counts for the Central Command dashboard cards (HR Tool and EA).
+app.get('/api/summary', h(async (_req, res) => {
+  const [actions, signing, onboarding] = await Promise.all([
+    store.list('actions'), store.list('signing'), store.list('onboarding'),
+  ])
+  const today = new Date().toISOString().slice(0, 10)
+  const open = actions.filter(a => a.status !== 'done')
+  res.json({
+    actions: {
+      open: open.length,
+      urgent: open.filter(a => a.priority === 'urgent').length,
+      overdue: open.filter(a => a.dueDate && a.dueDate < today).length,
+    },
+    signing: { pending: signing.filter(d => d.status === 'pending').length },
+    onboarding: { active: onboarding.filter(s => s.status !== 'complete').length },
+  })
+}))
+
 app.patch('/api/actions/:id', h(async (req, res) => {
   const existing = await store.get('actions', req.params.id)
   if (!existing) return res.status(404).json({ error: 'not found' })
