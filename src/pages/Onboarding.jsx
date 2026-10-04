@@ -3,7 +3,7 @@ import { ONBOARDING_PHASES, TEAMS } from '../data/studioData.js'
 import { PageHeader, PageContent, Card, CardHeader, Button, EATrigger, Grid } from '../components/UI.jsx'
 import styles from './Pages.module.css'
 
-const API = 'http://localhost:3001'
+import { API, apiFetch } from '../api.js'
 
 const DEPT_LABELS = {
   executive:'Executive', design:'Design', engineering:'Engineering',
@@ -220,7 +220,7 @@ export default function Onboarding() {
     if (!session) return
     setCreatingPkg(true)
     try {
-      const res = await fetch(`${API}/api/onboard`, {
+      const res = await apiFetch(`/api/onboard`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

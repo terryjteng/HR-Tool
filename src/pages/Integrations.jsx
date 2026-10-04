@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { INTEGRATIONS } from '../data/studioData.js'
 import { PageHeader, PageContent, Card, Tag, Button, EATrigger } from '../components/UI.jsx'
 import styles from './Pages.module.css'
+import { apiFetch } from '../api.js'
 
 export default function Integrations() {
   const [selected, setSelected] = useState('docusign')
@@ -9,15 +10,22 @@ export default function Integrations() {
   const int = INTEGRATIONS.find(i => i.id === selected) || INTEGRATIONS[0]
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/drive/status')
+    apiFetch('/api/drive/status')
       .then(r => r.json())
       .then(d => setDriveStatus(!!d.connected))
       .catch(() => setDriveStatus(false))
   }, [])
 
   const disconnectDrive = () => {
-    fetch('http://localhost:3001/api/drive/disconnect', { method: 'POST' })
+    apiFetch('/api/drive/disconnect', { method: 'POST' })
       .then(() => setDriveStatus(false))
+  }
+
+  const connectDrive = async () => {
+    const res = await apiFetch('/api/drive/auth-url')
+    const data = await res.json().catch(() => ({}))
+    if (data.url) window.location.href = data.url
+    else alert(data.error || 'Google Drive is not configured yet.')
   }
 
   const PRIORITY_LABELS = { 1:'Set up now', 2:'This week', 3:'This month' }
@@ -127,9 +135,7 @@ export default function Integrations() {
                     </button>
                   )}
                   {driveStatus === false && (
-                    <a href="http://localhost:3001/auth/google">
-                      <Button variant="primary" size="sm">Connect Drive</Button>
-                    </a>
+                    <Button variant="primary" size="sm" onClick={connectDrive}>Connect Drive</Button>
                   )}
                 </div>
               )}

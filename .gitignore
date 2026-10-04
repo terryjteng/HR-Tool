@@ -2,3 +2,10 @@ node_modules/
 dist/
 .env
 *.local
+
+# local-dev data (production uses Supabase)
+actions.json
+signing.json
+onboarding.json
+google_tokens.json
+.vercel

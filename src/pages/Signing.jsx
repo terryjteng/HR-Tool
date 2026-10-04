@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { PageHeader, PageContent, Card, Tag, Button } from '../components/UI.jsx'
 import styles from './Pages.module.css'
 
-const API = 'http://localhost:3001'
+import { API, apiFetch } from '../api.js'
 
 const TEMPLATES = [
   {
@@ -65,7 +65,7 @@ function CreateModal({ onClose, onCreated }) {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch(`${API}/api/signing`, {
+      const res = await apiFetch(`/api/signing`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ template: template.id, ...form }),
@@ -261,7 +261,7 @@ export default function Signing() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/signing`)
+      const res = await apiFetch(`/api/signing`)
       if (res.ok) setDocs(await res.json())
     } catch (_) {}
     setLoading(false)
@@ -271,7 +271,7 @@ export default function Signing() {
 
   const del = async id => {
     if (!window.confirm('Delete this document? This cannot be undone.')) return
-    await fetch(`${API}/api/signing/${id}`, { method: 'DELETE' })
+    await apiFetch(`/api/signing/${id}`, { method: 'DELETE' })
     load()
   }
 

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { PageHeader, PageContent, Card, CardHeader, Tag } from '../components/UI.jsx'
 import styles from './Pages.module.css'
+import { apiFetch } from '../api.js'
 
 const TOOL_LABELS = {
   list_actions: 'Reading actions',
@@ -118,7 +119,7 @@ export default function EAAgent() {
     let finalTools = []
 
     try {
-      const response = await fetch('/api/ea', {
+      const response = await apiFetch('/api/ea', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: newMessages }),

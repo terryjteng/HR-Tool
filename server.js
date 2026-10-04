@@ -2,36 +2,45 @@ import express from 'express'
 import Anthropic from '@anthropic-ai/sdk'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
-import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
-import { randomUUID } from 'crypto'
+import { existsSync } from 'fs'
+import { randomUUID, createHmac, timingSafeEqual } from 'crypto'
+import { store } from './lib/store.js'
+import { requireUser } from './lib/auth.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const app = express()
-app.use(express.json())
+app.use(express.json({ limit: '2mb' }))
 app.use(express.urlencoded({ extended: false }))
 
+// Other Kato.8 tools (e.g. the EA app) call this API from their own subdomains.
+const ALLOWED_ORIGIN = /^(https:\/\/([a-z0-9-]+\.)*kato8studiosapp\.xyz|http:\/\/localhost:\d+)$/
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*')
-  res.header('Access-Control-Allow-Headers', 'Content-Type')
-  res.header('Access-Control-Allow-Methods', 'POST, GET, PATCH, DELETE, OPTIONS')
+  const origin = req.headers.origin
+  if (origin && ALLOWED_ORIGIN.test(origin)) {
+    res.header('Access-Control-Allow-Origin', origin)
+    res.header('Vary', 'Origin')
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    res.header('Access-Control-Allow-Methods', 'POST, GET, PATCH, DELETE, OPTIONS')
+  }
   if (req.method === 'OPTIONS') return res.sendStatus(200)
+  next()
+})
+
+// Staff API routes need a signed-in Clerk user with a team role. Public routes:
+// the health check and the token-addressed signing endpoints used by recipients.
+const STAFF_ROLES = ['super_admin', 'team_lead', 'social_media_manager', 'member']
+const PUBLIC_API = [/^\/api\/ping$/, /^\/api\/signing\/token\//]
+app.use('/api', async (req, res, next) => {
+  if (PUBLIC_API.some(re => re.test(req.originalUrl.split('?')[0]))) return next()
+  const userId = await requireUser(req, res, { roles: STAFF_ROLES })
+  if (!userId) return
+  req.userId = userId
   next()
 })
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-// ─── Actions persistence ──────────────────────────────────────────────────────
-
-const ACTIONS_FILE = join(__dirname, 'actions.json')
-
-function loadActions() {
-  if (!existsSync(ACTIONS_FILE)) return []
-  try { return JSON.parse(readFileSync(ACTIONS_FILE, 'utf8')) } catch { return [] }
-}
-
-function saveActions(actions) {
-  writeFileSync(ACTIONS_FILE, JSON.stringify(actions, null, 2))
-}
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]))
 
 // ─── Action tool definitions (mirrors EA app) ────────────────────────────��────
 
@@ -130,7 +139,7 @@ const ACTION_TOOLS = [
 async function executeTool(name, input) {
   switch (name) {
     case 'list_actions': {
-      let actions = loadActions()
+      let actions = await store.list('actions')
       if (input.areaTag) actions = actions.filter(a => a.areaTag === input.areaTag)
       if (input.priority) actions = actions.filter(a => a.priority === input.priority)
       if (input.status) actions = actions.filter(a => a.status === input.status)
@@ -141,7 +150,6 @@ async function executeTool(name, input) {
       return { count: actions.length, actions }
     }
     case 'create_action': {
-      const actions = loadActions()
       const now = new Date().toISOString()
       const action = {
         id: randomUUID(),
@@ -155,12 +163,10 @@ async function executeTool(name, input) {
         createdAt: now,
         updatedAt: now,
       }
-      actions.unshift(action)
-      saveActions(actions)
+      await store.insertNew('actions', [action])
       return { success: true, action }
     }
     case 'create_multiple_actions': {
-      const actions = loadActions()
       const now = new Date().toISOString()
       const created = (input.actions || []).map(a => ({
         id: randomUUID(),
@@ -174,24 +180,18 @@ async function executeTool(name, input) {
         createdAt: now,
         updatedAt: now,
       }))
-      actions.unshift(...created)
-      saveActions(actions)
+      await store.insertNew('actions', created)
       return { success: true, count: created.length, actions: created }
     }
     case 'update_action': {
-      const actions = loadActions()
-      const idx = actions.findIndex(a => a.id === input.id)
-      if (idx === -1) return { success: false, error: 'Action not found', id: input.id }
+      const existing = await store.get('actions', input.id)
+      if (!existing) return { success: false, error: 'Action not found', id: input.id }
       const { id, ...updates } = input
-      actions[idx] = { ...actions[idx], ...updates, updatedAt: new Date().toISOString() }
-      saveActions(actions)
+      await store.put('actions', { ...existing, ...updates, id, updatedAt: new Date().toISOString() })
       return { success: true, id }
     }
     case 'delete_action': {
-      const actions = loadActions()
-      const exists = actions.some(a => a.id === input.id)
-      if (!exists) return { success: false, error: 'Action not found', id: input.id }
-      saveActions(actions.filter(a => a.id !== input.id))
+      if (!(await store.remove('actions', input.id))) return { success: false, error: 'Action not found', id: input.id }
       return { success: true }
     }
     default:
@@ -466,18 +466,23 @@ app.get('/api/team', (_req, res) => {
   res.json({ studio:'Kato.8 Studios', memberCount: TEAM.length, members: TEAM })
 })
 
-app.get('/api/actions', (req, res) => {
-  let actions = loadActions()
+// Wraps async route handlers so a storage failure returns a 500 instead of hanging.
+const h = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(err => {
+  console.error(err)
+  if (!res.headersSent) res.status(500).json({ error: 'Server error' })
+})
+
+app.get('/api/actions', h(async (req, res) => {
+  let actions = await store.list('actions')
   const { areaTag, priority, status, owner } = req.query
   if (areaTag) actions = actions.filter(a => a.areaTag === areaTag)
   if (priority) actions = actions.filter(a => a.priority === priority)
   if (status) actions = actions.filter(a => a.status === status)
   if (owner) actions = actions.filter(a => a.owner?.toLowerCase().includes(owner.toLowerCase()))
   res.json(actions)
-})
+}))
 
-app.post('/api/actions', (req, res) => {
-  const actions = loadActions()
+app.post('/api/actions', h(async (req, res) => {
   const now = new Date().toISOString()
   // Accept a provided id so the EA app can sync its locally-generated ids
   const action = {
@@ -492,20 +497,14 @@ app.post('/api/actions', (req, res) => {
     createdAt: req.body.createdAt || now,
     updatedAt: now,
   }
-  // Avoid duplicates
-  if (!actions.some(a => a.id === action.id)) {
-    actions.unshift(action)
-    saveActions(actions)
-  }
+  // insertNew skips ids that already exist
+  await store.insertNew('actions', [action])
   res.json(action)
-})
+}))
 
-app.post('/api/actions/batch', (req, res) => {
-  const actions = loadActions()
+app.post('/api/actions/batch', h(async (req, res) => {
   const now = new Date().toISOString()
-  const existingIds = new Set(actions.map(a => a.id))
   const incoming = (req.body.actions || [])
-    .filter(a => !existingIds.has(a.id))
     .map(a => ({
       id: a.id || randomUUID(),
       task: a.task || '',
@@ -518,37 +517,23 @@ app.post('/api/actions/batch', (req, res) => {
       createdAt: a.createdAt || now,
       updatedAt: now,
     }))
-  actions.unshift(...incoming)
-  saveActions(actions)
-  res.json(incoming)
-})
+  res.json(await store.insertNew('actions', incoming))
+}))
 
-app.patch('/api/actions/:id', (req, res) => {
-  const actions = loadActions()
-  const idx = actions.findIndex(a => a.id === req.params.id)
-  if (idx === -1) return res.status(404).json({ error: 'not found' })
-  actions[idx] = { ...actions[idx], ...req.body, id: req.params.id, updatedAt: new Date().toISOString() }
-  saveActions(actions)
-  res.json(actions[idx])
-})
+app.patch('/api/actions/:id', h(async (req, res) => {
+  const existing = await store.get('actions', req.params.id)
+  if (!existing) return res.status(404).json({ error: 'not found' })
+  const updated = { ...existing, ...req.body, id: req.params.id, updatedAt: new Date().toISOString() }
+  await store.put('actions', updated)
+  res.json(updated)
+}))
 
-app.delete('/api/actions/:id', (req, res) => {
-  const actions = loadActions()
-  const filtered = actions.filter(a => a.id !== req.params.id)
-  if (filtered.length === actions.length) return res.status(404).json({ error: 'not found' })
-  saveActions(filtered)
+app.delete('/api/actions/:id', h(async (req, res) => {
+  if (!(await store.remove('actions', req.params.id))) return res.status(404).json({ error: 'not found' })
   res.json({ ok: true })
-})
+}))
 
 // ─── Document Signing Platform ───────────────────────────────────────────────
-
-const SIGNING_FILE = join(__dirname, 'signing.json')
-
-function loadSigning() {
-  if (!existsSync(SIGNING_FILE)) return []
-  try { return JSON.parse(readFileSync(SIGNING_FILE, 'utf8')) } catch { return [] }
-}
-function saveSigning(docs) { writeFileSync(SIGNING_FILE, JSON.stringify(docs, null, 2)) }
 
 function makeToken() { return randomUUID().replace(/-/g, '').slice(0, 20) }
 
@@ -813,7 +798,7 @@ async function declineDoc() {
 
 // ─── Signing REST endpoints ───────────────────────────────────────────────────
 
-app.get('/api/signing', (_req, res) => res.json(loadSigning()))
+app.get('/api/signing', h(async (_req, res) => res.json(await store.list('signing'))))
 
 const DOC_TITLES = {
   'revenue-share': 'Revenue Share Agreement',
@@ -822,8 +807,7 @@ const DOC_TITLES = {
   'offer-letter': 'Offer Letter',
 }
 
-app.post('/api/signing', (req, res) => {
-  const docs = loadSigning()
+app.post('/api/signing', h(async (req, res) => {
   const now = new Date().toISOString()
   const b = req.body
   const templateId = b.templateId || b.template || 'revenue-share'
@@ -854,88 +838,74 @@ app.post('/api/signing', (req, res) => {
     signature: null,
     signerName: null,
   }
-  docs.unshift(doc)
-  saveSigning(docs)
+  await store.insertNew('signing', [doc])
   res.json(doc)
-})
+}))
 
-app.get('/api/signing/:id', (req, res) => {
-  const doc = loadSigning().find(d => d.id === req.params.id)
+app.get('/api/signing/:id', h(async (req, res) => {
+  const doc = await store.get('signing', req.params.id)
   if (!doc) return res.status(404).json({ error: 'not found' })
   res.json(doc)
-})
+}))
 
-app.patch('/api/signing/:id', (req, res) => {
-  const docs = loadSigning()
-  const idx = docs.findIndex(d => d.id === req.params.id)
-  if (idx === -1) return res.status(404).json({ error: 'not found' })
-  docs[idx] = { ...docs[idx], ...req.body, id: docs[idx].id, token: docs[idx].token }
-  saveSigning(docs)
-  res.json(docs[idx])
-})
+app.patch('/api/signing/:id', h(async (req, res) => {
+  const doc = await store.get('signing', req.params.id)
+  if (!doc) return res.status(404).json({ error: 'not found' })
+  const updated = { ...doc, ...req.body, id: doc.id, token: doc.token }
+  await store.put('signing', updated)
+  res.json(updated)
+}))
 
-app.delete('/api/signing/:id', (req, res) => {
-  const docs = loadSigning()
-  const filtered = docs.filter(d => d.id !== req.params.id)
-  if (filtered.length === docs.length) return res.status(404).json({ error: 'not found' })
-  saveSigning(filtered)
+app.delete('/api/signing/:id', h(async (req, res) => {
+  if (!(await store.remove('signing', req.params.id))) return res.status(404).json({ error: 'not found' })
   res.json({ ok: true })
-})
+}))
 
 // Public: get doc by token (JSON — for signing page AJAX on initial load check)
-app.get('/api/signing/token/:token', (req, res) => {
-  const doc = loadSigning().find(d => d.token === req.params.token)
+app.get('/api/signing/token/:token', h(async (req, res) => {
+  const doc = await store.getByToken('signing', req.params.token)
   if (!doc) return res.status(404).json({ error: 'not found' })
   const { signature, ...safe } = doc  // don't expose signature in GET
   res.json(safe)
-})
+}))
 
 // Public: submit signature
-app.post('/api/signing/token/:token/sign', (req, res) => {
-  const docs = loadSigning()
-  const idx = docs.findIndex(d => d.token === req.params.token)
-  if (idx === -1) return res.status(404).json({ error: 'Document not found' })
-  if (docs[idx].status === 'signed') return res.json({ success: true, alreadySigned: true })
-  if (docs[idx].status === 'declined') return res.status(400).json({ error: 'Document was declined' })
-  docs[idx].status = 'signed'
-  docs[idx].signedAt = new Date().toISOString()
-  docs[idx].signature = req.body.signature || null
-  docs[idx].signerName = req.body.signerName || docs[idx].recipient.name
-  saveSigning(docs)
+app.post('/api/signing/token/:token/sign', h(async (req, res) => {
+  const doc = await store.getByToken('signing', req.params.token)
+  if (!doc) return res.status(404).json({ error: 'Document not found' })
+  if (doc.status === 'signed') return res.json({ success: true, alreadySigned: true })
+  if (doc.status === 'declined') return res.status(400).json({ error: 'Document was declined' })
+  await store.put('signing', {
+    ...doc,
+    status: 'signed',
+    signedAt: new Date().toISOString(),
+    signature: req.body.signature || null,
+    signerName: req.body.signerName || doc.recipient.name,
+  })
   res.json({ success: true })
-})
+}))
 
 // Public: decline document
-app.post('/api/signing/token/:token/decline', (req, res) => {
-  const docs = loadSigning()
-  const idx = docs.findIndex(d => d.token === req.params.token)
-  if (idx === -1) return res.status(404).json({ error: 'not found' })
-  docs[idx].status = 'declined'
-  docs[idx].declinedAt = new Date().toISOString()
-  saveSigning(docs)
+app.post('/api/signing/token/:token/decline', h(async (req, res) => {
+  const doc = await store.getByToken('signing', req.params.token)
+  if (!doc) return res.status(404).json({ error: 'not found' })
+  await store.put('signing', { ...doc, status: 'declined', declinedAt: new Date().toISOString() })
   res.json({ success: true })
-})
+}))
 
 // Public: signing HTML page
-app.get('/sign/:token', (req, res) => {
-  const doc = loadSigning().find(d => d.token === req.params.token)
+app.get('/sign/:token', h(async (req, res) => {
+  const doc = await store.getByToken('signing', req.params.token)
   if (!doc) {
     return res.status(404).send(`<!DOCTYPE html><html><body style="font-family:sans-serif;padding:40px;text-align:center">
       <h2>Document not found</h2><p>This signing link is invalid or has expired.</p>
-      <p><a href="http://localhost:5173">Back to HR Platform</a></p></body></html>`)
+      <p>Questions? Contact terryt@kato8studios.com.</p></body></html>`)
   }
   res.setHeader('Content-Type', 'text/html')
   res.send(signingPageHTML(doc))
-})
+}))
 
 // ─── Onboarding Portal ────────────────────────────────────────────────────────
-
-const ONBOARD_FILE = join(__dirname, 'onboarding.json')
-function loadOnboarding() {
-  if (!existsSync(ONBOARD_FILE)) return []
-  try { return JSON.parse(readFileSync(ONBOARD_FILE, 'utf8')) } catch { return [] }
-}
-function saveOnboarding(s) { writeFileSync(ONBOARD_FILE, JSON.stringify(s, null, 2)) }
 
 const ONBOARD_DOC_TITLES = {
   'revenue-share': 'Revenue Share Agreement',
@@ -947,10 +917,10 @@ const ONBOARD_DOC_ICONS = {
 }
 
 // POST /api/onboard — create session + auto-generate 3 signing docs
-app.post('/api/onboard', (req, res) => {
+app.post('/api/onboard', h(async (req, res) => {
   const { name, role, email, dept, team, lead, startDate, revenueSharePct } = req.body
   if (!name || !role) return res.status(400).json({ error: 'name and role required' })
-  const signing = loadSigning()
+  const signingDocs = []
   const docs = []
   for (const template of ['revenue-share', 'ip-assignment', 'nda']) {
     const recipient = { name, email: email || '', role, dept: dept || 'art', team: team || 'studio', lead: lead || '', startDate: startDate || '', revenueSharePct: revenueSharePct || '' }
@@ -961,10 +931,10 @@ app.post('/api/onboard', (req, res) => {
       status: 'pending', createdAt: new Date().toISOString(),
       signedAt: null, declinedAt: null, signature: null, signerName: null,
     }
-    signing.push(doc)
+    signingDocs.push(doc)
     docs.push({ id: doc.id, token: doc.token, template, title: doc.title })
   }
-  saveSigning(signing)
+  await store.insertNew('signing', signingDocs)
   const session = {
     id: randomUUID(), token: makeToken(), name, role,
     email: email || '', dept: dept || 'art', team: team || 'studio',
@@ -972,59 +942,52 @@ app.post('/api/onboard', (req, res) => {
     docs, discordUsername: null, welcomeRead: false, calendarAdded: false,
     status: 'pending', createdAt: new Date().toISOString(),
   }
-  const sessions = loadOnboarding()
-  sessions.push(session)
-  saveOnboarding(sessions)
+  await store.insertNew('onboarding', [session])
   res.json(session)
-})
+}))
 
-app.get('/api/onboard', (_req, res) => res.json(loadOnboarding()))
-app.get('/api/onboard/:id', (req, res) => {
-  const s = loadOnboarding().find(s => s.id === req.params.id)
+app.get('/api/onboard', h(async (_req, res) => res.json(await store.list('onboarding'))))
+app.get('/api/onboard/:id', h(async (req, res) => {
+  const s = await store.get('onboarding', req.params.id)
   if (!s) return res.status(404).json({ error: 'not found' })
   res.json(s)
-})
-app.patch('/api/onboard/:id', (req, res) => {
-  const sessions = loadOnboarding()
-  const idx = sessions.findIndex(s => s.id === req.params.id)
-  if (idx === -1) return res.status(404).json({ error: 'not found' })
-  sessions[idx] = { ...sessions[idx], ...req.body }
-  saveOnboarding(sessions)
-  res.json(sessions[idx])
-})
+}))
+app.patch('/api/onboard/:id', h(async (req, res) => {
+  const s = await store.get('onboarding', req.params.id)
+  if (!s) return res.status(404).json({ error: 'not found' })
+  const updated = { ...s, ...req.body, id: s.id, token: s.token }
+  await store.put('onboarding', updated)
+  res.json(updated)
+}))
 
 // Discord username submission (HTML form POST — uses urlencoded body)
-app.post('/onboard/:token/discord', (req, res) => {
-  const sessions = loadOnboarding()
-  const idx = sessions.findIndex(s => s.token === req.params.token)
-  if (idx === -1) return res.status(404).send('Not found')
-  sessions[idx].discordUsername = (req.body.username || '').trim()
-  saveOnboarding(sessions)
-  res.redirect(`/onboard/${req.params.token}`)
-})
+app.post('/onboard/:token/discord', h(async (req, res) => {
+  const session = await store.getByToken('onboarding', req.params.token)
+  if (!session) return res.status(404).send('Not found')
+  await store.put('onboarding', { ...session, discordUsername: String(req.body.username || '').trim().slice(0, 64) })
+  res.redirect(`/onboard/${encodeURIComponent(req.params.token)}`)
+}))
 
 // Mark a step complete (JSON POST from portal JS)
-app.post('/onboard/:token/complete', (req, res) => {
-  const sessions = loadOnboarding()
-  const idx = sessions.findIndex(s => s.token === req.params.token)
-  if (idx === -1) return res.status(404).json({ error: 'not found' })
+app.post('/onboard/:token/complete', h(async (req, res) => {
+  const session = await store.getByToken('onboarding', req.params.token)
+  if (!session) return res.status(404).json({ error: 'not found' })
   const { step } = req.body
-  if (step === 'welcomeRead') sessions[idx].welcomeRead = true
-  if (step === 'calendarAdded') sessions[idx].calendarAdded = true
-  saveOnboarding(sessions)
+  const updated = { ...session }
+  if (step === 'welcomeRead') updated.welcomeRead = true
+  if (step === 'calendarAdded') updated.calendarAdded = true
+  await store.put('onboarding', updated)
   res.json({ ok: true })
-})
+}))
 
 // Public onboarding portal
-app.get('/onboard/:token', (req, res) => {
-  const sessions = loadOnboarding()
-  const session = sessions.find(s => s.token === req.params.token)
+app.get('/onboard/:token', h(async (req, res) => {
+  const session = await store.getByToken('onboarding', req.params.token)
   if (!session) return res.status(404).send(`<!DOCTYPE html><html><body style="font-family:sans-serif;padding:40px;text-align:center"><h2>Invalid onboarding link</h2><p>This link is invalid or has expired. Contact terryt@kato8studios.com.</p></body></html>`)
-  const signing = loadSigning()
-  const docsWithStatus = session.docs.map(d => {
-    const sd = signing.find(sd => sd.id === d.id)
+  const docsWithStatus = await Promise.all(session.docs.map(async d => {
+    const sd = await store.get('signing', d.id)
     return { ...d, status: sd?.status || 'pending' }
-  })
+  }))
   const allDocsSigned = docsWithStatus.every(d => d.status === 'signed')
   const steps = [
     { done: allDocsSigned },
@@ -1035,7 +998,7 @@ app.get('/onboard/:token', (req, res) => {
   const progress = Math.round(steps.filter(s => s.done).length / steps.length * 100)
   res.setHeader('Content-Type', 'text/html')
   res.send(onboardingPortalHTML(session, docsWithStatus, allDocsSigned, progress))
-})
+}))
 
 function onboardingPortalHTML(session, docs, allDocsSigned, progress) {
   const teamLabel = { studio:'General Studio', 'last-light':'Last Light', corebound:'Corebound', 'big-boss-cleanup':'Big Boss Cleanup' }[session.team] || session.team
@@ -1097,7 +1060,7 @@ function onboardingPortalHTML(session, docs, allDocsSigned, progress) {
       ${startStr ? `<br>Start date: <strong>${startStr}</strong>` : ''}
     </div>
     <div class="prog-wrap"><div class="prog-fill" style="width:${progress}%"></div></div>
-    <div class="prog-label">${steps ? steps.filter(s=>s.done).length : 0} of 4 steps complete · ${progress}%</div>
+    <div class="prog-label">${Math.round(progress * 4 / 100)} of 4 steps complete · ${progress}%</div>
   </div>
 
   <!-- Step 1: Agreements -->
@@ -1127,7 +1090,7 @@ function onboardingPortalHTML(session, docs, allDocsSigned, progress) {
     </div>
     <div class="step-body">
       ${session.discordUsername
-        ? `<p class="success">✓ Discord username on file: <strong>${session.discordUsername}</strong></p>
+        ? `<p class="success">✓ Discord username on file: <strong>${esc(session.discordUsername)}</strong></p>
            <p class="hint" style="margin-top:6px">Our team will add you to the Kato.8 Studios server and assign your department role. Check your Discord requests.</p>`
         : `<p class="hint" style="margin-bottom:0">Submit your Discord username and we'll add you to the studio server and assign your role.</p>
            <form class="discord-form" action="/onboard/${session.token}/discord" method="POST">
@@ -1196,112 +1159,154 @@ async function completeStep(step, btn) {
 }
 
 // ─── Google Drive Integration ─────────────────────────────────────────────────
-// Setup: add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env
-// Then click "Connect Google Drive" in the HR platform
-// Redirect URI: http://localhost:3001/auth/google/callback
+// Setup: set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET, and add
+// <APP_URL>/auth/google/callback as an authorized redirect URI in Google Cloud.
+// Uses the Drive REST API directly (the googleapis package is too large for a
+// Vercel function). Tokens are stored with the HR records (key google_tokens).
 
-import { google } from 'googleapis'
-import { createWriteStream } from 'fs'
+const DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.metadata.readonly'
+const driveConfigured = () => !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET)
 
-const TOKENS_FILE = join(__dirname, 'google_tokens.json')
-
-function loadTokens() {
-  if (!existsSync(TOKENS_FILE)) return null
-  try { return JSON.parse(readFileSync(TOKENS_FILE, 'utf8')) } catch { return null }
+function appUrl(req) {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, '')
+  const proto = req.headers['x-forwarded-proto'] || req.protocol
+  const host = req.headers['x-forwarded-host'] || req.headers.host
+  // Local dev: the UI runs on Vite (5173) and proxies to this server.
+  return host?.startsWith('localhost:3001') ? 'http://localhost:5173' : `${proto}://${host}`
 }
-function saveTokens(t) { writeFileSync(TOKENS_FILE, JSON.stringify(t, null, 2)) }
+const redirectUri = req => `${appUrl(req)}/auth/google/callback`
 
-function getDriveClient() {
-  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) return null
-  const auth = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    'http://localhost:3001/auth/google/callback'
-  )
-  const tokens = loadTokens()
-  if (tokens) auth.setCredentials(tokens)
-  return auth
+// The OAuth `state` is an HMAC-signed "<userId>.<issuedAt>" so only a signed-in
+// staff member can complete the connection.
+const stateSecret = () => process.env.CLERK_SECRET_KEY || process.env.GOOGLE_CLIENT_SECRET || ''
+const signState = userId => {
+  const payload = `${userId}.${Date.now()}`
+  return `${payload}.${createHmac('sha256', stateSecret()).update(payload).digest('base64url')}`
+}
+function checkState(state) {
+  const [userId, issued, sig] = String(state || '').split('.')
+  if (!userId || !issued || !sig) return false
+  const want = createHmac('sha256', stateSecret()).update(`${userId}.${issued}`).digest('base64url')
+  if (sig.length !== want.length || !timingSafeEqual(Buffer.from(sig), Buffer.from(want))) return false
+  return Date.now() - Number(issued) < 15 * 60 * 1000
+}
+
+async function googleToken(params) {
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID, client_secret: process.env.GOOGLE_CLIENT_SECRET, ...params }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error_description || data.error || 'token request failed')
+  return data
+}
+
+// Returns a valid access token, refreshing it when it has expired.
+async function driveAccessToken() {
+  const tokens = await store.kvGet('google_tokens')
+  if (!tokens) return null
+  if (tokens.expiry_date && Date.now() < tokens.expiry_date - 60_000) return tokens.access_token
+  if (!tokens.refresh_token) return tokens.access_token
+  const fresh = await googleToken({ grant_type: 'refresh_token', refresh_token: tokens.refresh_token })
+  const next = { ...tokens, access_token: fresh.access_token, expiry_date: Date.now() + fresh.expires_in * 1000 }
+  await store.kvSet('google_tokens', next)
+  return next.access_token
+}
+
+async function driveGet(path, params, token) {
+  const res = await fetch(`https://www.googleapis.com/drive/v3/${path}?${new URLSearchParams(params)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error?.message || 'Drive request failed')
+  return data
 }
 
 // Status: check if Drive is connected
-app.get('/api/drive/status', async (req, res) => {
-  const auth = getDriveClient()
-  if (!auth) return res.json({ connected: false, reason: 'no_credentials' })
-  const tokens = loadTokens()
-  if (!tokens) return res.json({ connected: false, reason: 'not_authorized' })
+app.get('/api/drive/status', h(async (req, res) => {
+  if (!driveConfigured()) return res.json({ connected: false, reason: 'no_credentials' })
   try {
-    const drive = google.drive({ version: 'v3', auth })
-    const about = await drive.about.get({ fields: 'user' })
-    res.json({ connected: true, email: about.data.user.emailAddress, name: about.data.user.displayName })
+    const token = await driveAccessToken()
+    if (!token) return res.json({ connected: false, reason: 'not_authorized' })
+    const about = await driveGet('about', { fields: 'user' }, token)
+    res.json({ connected: true, email: about.user.emailAddress, name: about.user.displayName })
   } catch (err) {
     res.json({ connected: false, reason: 'auth_error', error: err.message })
   }
-})
+}))
 
-// Start OAuth flow
-app.get('/auth/google', (req, res) => {
-  const auth = getDriveClient()
-  if (!auth) return res.status(400).send('Google OAuth credentials not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env')
-  const url = auth.generateAuthUrl({
+// Returns the Google consent URL for the signed-in user (the UI navigates to it).
+app.get('/api/drive/auth-url', (req, res) => {
+  if (!driveConfigured()) return res.status(400).json({ error: 'Google OAuth credentials not configured' })
+  const url = 'https://accounts.google.com/o/oauth2/v2/auth?' + new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    redirect_uri: redirectUri(req),
+    response_type: 'code',
     access_type: 'offline',
-    scope: ['https://www.googleapis.com/auth/drive.readonly', 'https://www.googleapis.com/auth/drive.metadata.readonly'],
     prompt: 'consent',
+    scope: DRIVE_SCOPES,
+    state: signState(req.userId),
   })
-  res.redirect(url)
+  res.json({ url })
 })
 
 // OAuth callback
-app.get('/auth/google/callback', async (req, res) => {
-  const { code, error } = req.query
-  if (error) return res.redirect('http://localhost:5173?drive_error=' + error)
-  const auth = getDriveClient()
-  if (!auth) return res.status(400).send('OAuth not configured')
+app.get('/auth/google/callback', h(async (req, res) => {
+  const { code, error, state } = req.query
+  const back = appUrl(req)
+  if (error) return res.redirect(`${back}?drive_error=${encodeURIComponent(error)}`)
+  if (!driveConfigured() || !checkState(state)) return res.redirect(`${back}?drive_error=invalid_state`)
   try {
-    const { tokens } = await auth.getToken(code)
-    saveTokens(tokens)
-    res.redirect('http://localhost:5173?drive_connected=1')
+    const t = await googleToken({ grant_type: 'authorization_code', code, redirect_uri: redirectUri(req) })
+    await store.kvSet('google_tokens', {
+      access_token: t.access_token,
+      refresh_token: t.refresh_token,
+      expiry_date: Date.now() + t.expires_in * 1000,
+      scope: t.scope,
+    })
+    res.redirect(`${back}?drive_connected=1`)
   } catch (err) {
-    res.redirect('http://localhost:5173?drive_error=' + encodeURIComponent(err.message))
+    res.redirect(`${back}?drive_error=${encodeURIComponent(err.message)}`)
   }
-})
+}))
 
 // List Drive files
-app.get('/api/drive/files', async (req, res) => {
-  const auth = getDriveClient()
-  if (!auth || !loadTokens()) return res.status(401).json({ error: 'Drive not connected' })
+app.get('/api/drive/files', h(async (req, res) => {
+  const token = driveConfigured() && await driveAccessToken()
+  if (!token) return res.status(401).json({ error: 'Drive not connected' })
   try {
-    const drive = google.drive({ version: 'v3', auth })
-    const q = req.query.q || ''
-    const params = {
-      pageSize: 50,
+    const q = String(req.query.q || '')
+    let query = q ? `name contains '${q.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}' and trashed=false` : 'trashed=false'
+    if (req.query.folder) query += ` and '${String(req.query.folder).replace(/[^\w-]/g, '')}' in parents`
+    const result = await driveGet('files', {
+      pageSize: '50',
       fields: 'files(id,name,mimeType,size,modifiedTime,webViewLink,parents)',
       orderBy: 'modifiedTime desc',
-    }
-    if (q) params.q = `name contains '${q.replace(/'/g, "\\'")}' and trashed=false`
-    else params.q = 'trashed=false'
-    if (req.query.folder) params.q += ` and '${req.query.folder}' in parents`
-    const result = await drive.files.list(params)
-    res.json(result.data.files || [])
+      q: query,
+    }, token)
+    res.json(result.files || [])
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
-})
+}))
 
 // Disconnect Drive
-app.post('/api/drive/disconnect', (req, res) => {
-  if (existsSync(TOKENS_FILE)) {
-    try { unlinkSync(TOKENS_FILE) } catch (_) {}
-  }
+app.post('/api/drive/disconnect', h(async (_req, res) => {
+  await store.kvDelete('google_tokens')
   res.json({ ok: true })
-})
+}))
 
-// ─── Serve built frontend in production ──────────────────────────────────────
+// ─── Serve built frontend (local `npm run preview`; Vercel serves dist itself) ─
 
-const distPath = join(__dirname, 'dist')
-if (existsSync(distPath)) {
-  app.use(express.static(distPath))
-  app.get('*', (_req, res) => res.sendFile(join(distPath, 'index.html')))
+export default app
+
+if (!process.env.VERCEL) {
+  const distPath = join(__dirname, 'dist')
+  if (existsSync(distPath)) {
+    app.use(express.static(distPath))
+    app.get('*', (_req, res) => res.sendFile(join(distPath, 'index.html')))
+  }
+  const PORT = process.env.PORT || 3001
+  app.listen(PORT, () => console.log(`HR API running on http://localhost:${PORT} (${store.usingSupabase ? 'Supabase' : 'local JSON files'})`))
 }
-
-const PORT = process.env.PORT || 3001
-app.listen(PORT, () => console.log(`EA Agent server running on http://localhost:${PORT}`))
