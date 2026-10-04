@@ -418,7 +418,8 @@ app.post('/api/ea', async (req, res) => {
 
 // ─── Actions REST CRUD (shared with EA app) ───────────────────────────────��───
 
-app.get('/api/ping', (_req, res) => res.json({ ok: true, service: 'kato8-hr-tool' }))
+// ok is false until storage is configured, so the EA app keeps its local copy.
+app.get('/api/ping', (_req, res) => res.json({ ok: store.ready, service: 'kato8-hr-tool' }))
 
 // ─── Team manifest endpoint (consumed by Social Media Dashboard) ──────────────
 app.get('/api/team', (_req, res) => {
